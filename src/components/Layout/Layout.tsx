@@ -7,7 +7,7 @@ import { useUIStore } from '../../store/ui';
 import ToastHost from './ToastHost';
 
 export function Layout() {
-  const { isRightSidebarOpen, closeRightSidebar, isWatchlistOpen } = useUIStore();
+  const { isRightSidebarOpen, isRightSidebarClosing, closeRightSidebar, isWatchlistOpen } = useUIStore();
   return (
     <div className="relative h-dvh">
       {/* Left Navigation - Fixed position, full height */}
@@ -37,7 +37,7 @@ export function Layout() {
       {isRightSidebarOpen && (
         <>
           <div
-            className="fixed inset-0 z-30 bg-black/40 animate-backdrop-fade"
+            className={`fixed inset-0 z-30 bg-black/40 ${isRightSidebarClosing ? 'animate-backdrop-out' : 'animate-backdrop-fade'}`}
             onClick={closeRightSidebar}
           />
           <RightSidebar />

@@ -3,25 +3,46 @@ import type { CardData } from '../components/Card/Card';
 
 interface UIState {
   isRightSidebarOpen: boolean;
+  isRightSidebarClosing: boolean;
   selectedCard: CardData | null;
   openRightSidebar: (card: CardData) => void;
   closeRightSidebar: () => void;
   // Watchlist sidebar state
   isWatchlistOpen: boolean;
+  isWatchlistClosing: boolean;
   openWatchlist: () => void;
   closeWatchlist: () => void;
 }
 
-export const useUIStore = create<UIState>((set) => ({
+export const useUIStore = create<UIState>((set, get) => ({
   isRightSidebarOpen: false,
+  isRightSidebarClosing: false,
   selectedCard: null,
-  openRightSidebar: (card: CardData) =>
-    set({ isRightSidebarOpen: true, selectedCard: card }),
-  closeRightSidebar: () => set({ isRightSidebarOpen: false, selectedCard: null }),
+  openRightSidebar: (card: CardData) => {
+    // Reset closing state and open
+    set({ isRightSidebarOpen: true, isRightSidebarClosing: false, selectedCard: card });
+  },
+  closeRightSidebar: () => {
+    const state = get();
+    if (!state.isRightSidebarOpen || state.isRightSidebarClosing) return; // no-op
+    set({ isRightSidebarClosing: true });
+    // Wait for CSS animation to complete before unmounting
+    setTimeout(() => {
+      set({ isRightSidebarOpen: false, isRightSidebarClosing: false, selectedCard: null });
+    }, 220);
+  },
   // Watchlist sidebar controls
   isWatchlistOpen: false,
-  openWatchlist: () => set({ isWatchlistOpen: true }),
-  closeWatchlist: () => set({ isWatchlistOpen: false }),
+  isWatchlistClosing: false,
+  openWatchlist: () => set({ isWatchlistOpen: true, isWatchlistClosing: false }),
+  closeWatchlist: () => {
+    const state = get();
+    if (!state.isWatchlistOpen || state.isWatchlistClosing) return; // no-op
+    set({ isWatchlistClosing: true });
+    setTimeout(() => {
+      set({ isWatchlistOpen: false, isWatchlistClosing: false });
+    }, 200);
+  },
 }));
 
 // Simple toast system

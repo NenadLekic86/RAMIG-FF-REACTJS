@@ -3,7 +3,7 @@ import { useUIStore } from '../../store/ui';
 import { useToast } from '../../store/ui';
 
 export function RightSidebar() {
-  const { isRightSidebarOpen, selectedCard, closeRightSidebar } = useUIStore();
+  const { isRightSidebarOpen, isRightSidebarClosing, selectedCard, closeRightSidebar } = useUIStore();
   const { pushToast } = useToast();
   const [view, setView] = useState<'list' | 'detail'>('list');
   const [detail, setDetail] = useState<{ label: string; side: 'buy' | 'sell' | 'yes' | 'no' } | null>(null);
@@ -62,7 +62,7 @@ export function RightSidebar() {
   const isOverBalance = !Number.isNaN(amountValue) && amountValue > balanceUsd;
 
   return (
-    <aside className="fixed right-0 top-0 z-40 h-dvh w-[440px] border-l border-customGray44 bg-customGray17 shadow-xl">
+    <aside className={`fixed right-0 top-0 z-40 h-dvh w-[440px] border-l border-customGray44 bg-customGray17 shadow-xl ${isRightSidebarClosing ? 'animate-rsb-out' : 'animate-rsb-in'}`}>
       {/* Floating outside close button */}
       <button
         onClick={closeRightSidebar}

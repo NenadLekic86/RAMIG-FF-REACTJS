@@ -26,6 +26,7 @@ const providerKeyToLabel: Record<string, string> = {
 
 export default function WatchlistSidebar() {
   const closeWatchlist = useUIStore(s => s.closeWatchlist);
+  const isWatchlistClosing = useUIStore(s => s.isWatchlistClosing);
   const [activeTab, setActiveTab] = useState<TabKey>('trending');
   const watchlistMap = useWatchlistStore(s => s.itemsById);
   const [searchQuery, setSearchQuery] = useState('');
@@ -191,7 +192,7 @@ export default function WatchlistSidebar() {
   };
 
   return (
-    <aside className="hidden lg:flex flex-col fixed left-[80px] top-8 z-30 h-dvh w-[320px] border-r border-customGray44">
+    <aside className={`hidden lg:flex flex-col fixed left-[80px] top-8 z-30 h-dvh w-[320px] border-r border-customGray44 ${isWatchlistClosing ? 'animate-lsb-out' : 'animate-lsb-in'}`}>
       {/* Header */}
       <div className="px-4 py-8 flex items-center justify-between">
         <h2 className="text-base font-semibold">My Watchlist</h2>

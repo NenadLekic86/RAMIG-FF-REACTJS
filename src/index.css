@@ -287,3 +287,52 @@ a, button, .btn {
 
 /* Removed crumple animation (reverted) */
 
+
+/* ========== Sidebar slide/fade animations ========== */
+@keyframes slideInRight {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutRight {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(24px); opacity: 0; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutLeft {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-24px); opacity: 0; }
+}
+
+.animate-rsb-in { /* right sidebar open */
+  animation: slideInRight 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform, opacity;
+}
+
+.animate-rsb-out { /* right sidebar close */
+  animation: slideOutRight 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-lsb-in { /* left sidebar (watchlist) open */
+  animation: slideInLeft 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform, opacity;
+}
+
+.animate-lsb-out { /* left sidebar (watchlist) close */
+  animation: slideOutLeft 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rsb-in, .animate-rsb-out, .animate-lsb-in, .animate-lsb-out,
+  .animate-backdrop-fade, .animate-backdrop-out {
+    animation-duration: 1ms !important;
+  }
+}
+
