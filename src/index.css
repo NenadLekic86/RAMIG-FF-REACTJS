@@ -1,0 +1,289 @@
+@import "tailwindcss";
+
+@theme {
+  /* Tailwind tokens (optional) */
+  --font-sans: 'General Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --font-title: 'Grotesk', 'General Sans', ui-sans-serif, system-ui;
+}
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-Regular.woff2') format('woff2'),
+      url('/fonts/GeneralSans-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-Medium.woff2') format('woff2'),
+      url('/fonts/GeneralSans-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-Semibold.woff2') format('woff2'),
+      url('/fonts/GeneralSans-Semibold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-Bold.woff2') format('woff2'),
+      url('/fonts/GeneralSans-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Grotesk';
+  src: url('/fonts/Grotesk.woff2') format('woff2'),
+      url('/fonts/Grotesk.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+
+
+/* Custom theme tokens (dark) */
+:root {
+  --bg: #0a0a0a;
+  --panel: #171717;
+  --elevated: #16161a;
+  --border: #26262a;
+  --text: #e4e4e7;
+  --muted: #a1a1aa;
+  --accent: #22c55e;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --green-700: #039855;
+  --red-700: #D92D20;
+  --customGray17: #171717;
+  --customBorder: #1A1A1A;
+  --customBg: #070707;
+  --customGray44: #212121;
+  /* Shared gradient token for underlines/borders */
+  --brand-underline-gradient: linear-gradient(90deg, #12B76A 0%, #0BA5EC 25%, #EE46BC 50%, #7A5AF8 75%, #F79009 100%);
+}
+
+/* Document base */
+html,body,#root { 
+  height: 100%; 
+}
+body { 
+  background-color: var(--customBg); 
+  color: #ffffff; 
+  font-family: var(--font-sans); 
+  font-weight: 400; 
+  overflow: hidden; 
+}
+
+a, button, .btn {
+  @apply cursor-pointer;
+}
+
+/* Reusable font helpers */
+.font-title { font-family: var(--font-title); }
+.font-button { font-family: var(--font-sans); font-weight: 600; }
+.font-heading { font-family: var(--font-sans); font-weight: 600; }
+
+/* Custom utility classes (only when Tailwind cannot express it) */
+.card {
+  background: var(--panel);
+  /* border: 1px solid var(--border); */
+  border-radius: 8px;
+}
+
+/* Custom colors using CSS variables */
+.bg-customGray17 {
+  background-color: var(--customGray17);
+}
+
+.text-customGray17 {
+  color: var(--customGray17);
+}
+
+.border-customGray17 {
+  border-color: var(--customGray17);
+}
+
+.border-customBorder {
+  border-color: var(--customBorder);
+}
+
+.bg-customBg {
+  background-color: var(--customBg);
+}
+
+.bg-customGray44 {
+  background-color: var(--customGray44);
+}
+
+.border-customGray44 {
+  border-color: var(--customGray44);
+}
+
+/* Avatar gradient border */
+.avatar-gradient {
+  background: linear-gradient(90deg, #12B76A 0%, #0BA5EC 50%, #7A5AF8 75%, #EE46BC 88%, #F79009 100%);
+  border-radius: 9999px;
+}
+
+/* Sign Up button linear gradient from left to right */
+.sign-up-gradient {
+  background: linear-gradient(to right, #12B76A 0%, #0BA5EC 25%, #7A5AF8 50%, #EE46BC 75%, #F79009 100%);
+}
+
+/* Filter tabs styles */
+.filter-tab {
+  @apply cursor-pointer transition-all duration-200 px-3 py-1 text-sm;
+  color: rgba(255, 255, 255, 0.44);
+}
+
+.filter-tab.active {
+  color: #ffffff;
+  position: relative;
+}
+
+/* Tabs underline helpers (universal) */
+.bg-underline-gradient { background: var(--brand-underline-gradient); }
+
+/* Container helper for tabs that show a moving gradient indicator.
+   Use the moving indicator as an absolutely-positioned child element. */
+.tabs-with-indicator { position: relative; }
+
+.scroll-thin {
+  scrollbar-width: thin;
+}
+.scroll-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+.scroll-thin::-webkit-scrollbar-track { background: transparent; }
+
+/* Hide scrollbars but keep scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+  width: 0;
+  height: 0;
+}
+
+/* Gradient border overlay (keeps base solid border underneath) */
+.border-gradient-overlay {
+  position: relative;
+}
+.border-gradient-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px; /* controls gradient stroke thickness */
+  /* Use provider-specific color via CSS var --border-grad-rgb (r,g,b) */
+  background: linear-gradient(
+    90deg,
+    rgba(var(--border-grad-rgb, 255,255,255), 1) 0%,
+    rgba(var(--border-grad-rgb, 255,255,255), 0.5) 30%,
+    rgba(var(--border-grad-rgb, 255,255,255), 0) 100%
+  );
+  pointer-events: none;
+  /* show only the border ring (exclude inner content box) */
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+}
+
+/* Chart container sizing that needs JS-measured heights later */
+.chart-container { height: 360px; }
+
+/* Line clamp utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Decorative top-left gradient border helper */
+.corner-gradient-border { position: relative; }
+.corner-gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: #4337C4;
+  background: linear-gradient(45deg,rgba(67, 55, 196, 0) 0%, rgba(67, 55, 196, 1) 100%);
+  top: -2px;
+  right: -2px;
+  z-index: -1;
+}
+
+/* Box-shadow style top-left glow (alternative to gradient border) */
+.corner-shadow-tl {
+  /* subtle 1px highlight + layered glows biased to top-left via negative offsets */
+  box-shadow:
+    1px -1px 0 0 rgba(67, 55, 196, 0.55);
+}
+
+/* Gradient border utility for buttons (top-left → bottom-right) */
+.btn-gradient-border {
+  background:
+    linear-gradient(#272728, #272728) padding-box,
+    linear-gradient(45deg, #12B76A 0%, #0BA5EC 25%, #7A5AF8 50%, #EE46BC 75%, #F79009 100%) border-box;
+  border: 1px solid transparent; /* visible via gradient layer */
+  border-radius: 10px; /* match button radius */
+}
+
+/* Modal open animations */
+@keyframes modalUmbrellaOpen {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+    clip-path: circle(0% at 50% 50%);
+  }
+  60% {
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    clip-path: circle(150% at 50% 50%);
+  }
+}
+
+.animate-modal-umbrella {
+  animation: modalUmbrellaOpen 380ms cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: center;
+  will-change: transform, clip-path, opacity;
+}
+
+/* Close (reverse) variant */
+.animate-modal-umbrella-close {
+  animation: modalUmbrellaOpen 380ms cubic-bezier(0.22, 1, 0.36, 1) reverse;
+  transform-origin: center;
+  will-change: transform, clip-path, opacity;
+}
+
+@keyframes backdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-backdrop-fade { animation: backdropFadeIn 220ms ease-out; }
+
+@keyframes backdropFadeOut { from { opacity: 1; } to { opacity: 0; } }
+.animate-backdrop-out { animation: backdropFadeOut 220ms ease-in forwards; }
+
+/* Removed crumple animation (reverted) */
+
