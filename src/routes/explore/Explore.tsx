@@ -1,118 +1,15 @@
 import { useMemo, useRef, useState } from 'react';
-import Card, { type CardData } from '../../components/Card/Card.tsx';
+import Card from '../../components/Card/Card.tsx';
+import type { CardData } from '../../models/card';
+import { demoCards } from '../../models/card';
 import ExploreFilter from '../../components/Modals/ExploreFilter';
 import { useUIStore } from '../../store/ui';
 import TabUnderline from '../../components/Tabs/TabUnderline.tsx';
 import { useProviderFilters, type ProviderKey } from '../../store/filters';
 import { filterByQuery } from '../../utils/search';
 
-// Sample market data - this will be replaced with API data later
-const sampleMarketData: CardData[] = [
-    {
-        id: '1',
-        title: 'AI achieves human parity',
-        description: 'Will SpaceX land humans on Mars by 2023?',
-        provider: 'kalshi',
-        liquidity: '$1.0M',
-        createdDate: '19 Jul, 2025',
-        imageUrl: '/placeholder_img.png',
-        yesPercentage: 80.0,
-        noPercentage: 20.0,
-        hasHoverEffect: true,
-        isActive: true
-    },
-    {
-        id: '2',
-        title: 'Human Mars 2030',
-        description: 'Will SpaceX land humans on Mars by 2023?',
-        provider: 'manifold',
-        liquidity: '$1.0M',
-        createdDate: '19 Jul, 2025',
-        imageUrl: '/placeholder_img.png',
-        yesPercentage: 80.0,
-        noPercentage: 20.0,
-        hasHoverEffect: true,
-        isActive: true
-    },
-    {
-        id: '3',
-        title: 'AR headset unveiled at WWDC 2026',
-        description: 'Will Apple release an AR headset?',
-        provider: 'limitless',
-        liquidity: '$1.0M',
-        createdDate: '19 Jul, 2025',
-        imageUrl: '/placeholder_img.png',
-        yesPercentage: 80.0,
-        noPercentage: 20.0,
-        hasHoverEffect: true,
-        isActive: true
-    },
-    {
-        id: '4',
-        title: 'AI achieves human parity',
-        description: 'Will SpaceX land humans on Mars by 2023?',
-        provider: 'kalshi',
-        liquidity: '$1.0M',
-        createdDate: '19 Jul, 2025',
-        imageUrl: '/placeholder_img.png',
-        yesPercentage: 80.0,
-        noPercentage: 20.0,
-        hasHoverEffect: true,
-        isActive: true
-    },
-    {
-        id: '5',
-        title: 'Human Mars 2030',
-        description: 'Will SpaceX land humans on Mars by 2023?',
-        provider: 'limitless',
-        liquidity: '$1.0M',
-        createdDate: '19 Jul, 2025',
-        imageUrl: '/placeholder_img.png',
-        yesPercentage: 80.0,
-        noPercentage: 20.0,
-        hasHoverEffect: true,
-        isActive: true
-    },
-    {
-        id: '6',
-        title: 'Human Mars 2030',
-        description: 'Will SpaceX land humans on Mars by 2023?',
-        provider: 'polymarket',
-        liquidity: '$1.0M',
-        createdDate: '19 Jul, 2025',
-        imageUrl: '/placeholder_img.png',
-        yesPercentage: 80.0,
-        noPercentage: 20.0,
-        hasHoverEffect: true,
-        isActive: true
-    },
-    {
-        id: '7',
-        title: 'Human Mars 2030',
-        description: 'Will SpaceX land humans on Mars by 2023?',
-        provider: 'predictit',
-        liquidity: '$1.0M',
-        createdDate: '19 Jul, 2025',
-        imageUrl: '/placeholder_img.png',
-        yesPercentage: 80.0,
-        noPercentage: 20.0,
-        hasHoverEffect: true,
-        isActive: true
-    },
-    {
-        id: '8',
-        title: 'Human Mars 2030',
-        description: 'Will SpaceX land humans on Mars by 2023?',
-        provider: 'zeitgeist',
-        liquidity: '$1.0M',
-        createdDate: '19 Jul, 2025',
-        imageUrl: '/placeholder_img.png',
-        yesPercentage: 80.0,
-        noPercentage: 20.0,
-        hasHoverEffect: true,
-        isActive: true
-    }
-];
+// Sample market data - centralized in models/card for now
+const sampleMarketData: CardData[] = demoCards;
 
 export default function Explore() {
     const [activeFilter, setActiveFilter] = useState('all');
@@ -201,7 +98,7 @@ export default function Explore() {
         </div>
 
         {/* Market cards */}
-        <section className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+        <section className={`grid gap-2 sm:grid-cols-2 md:grid-cols-3 ${isWatchlistOpen ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>
             {useMemo(() => {
                 const selected = providerFilters.selectedProviders;
                 const base = selected.size === 0

@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useUIStore } from '../../store/ui';
 
 function SidebarIcon({ src, alt, to, active = false }: { src: string; alt: string; to?: string; active?: boolean }) {
     const img = (
@@ -15,6 +16,12 @@ function SidebarIcon({ src, alt, to, active = false }: { src: string; alt: strin
 }
 
 export function LeftNav() {
+    const isWatchlistOpen = useUIStore(s => s.isWatchlistOpen);
+    const openWatchlist = useUIStore(s => s.openWatchlist);
+    const closeWatchlist = useUIStore(s => s.closeWatchlist);
+    const toggleWatchlist = () => {
+        if (isWatchlistOpen) closeWatchlist(); else openWatchlist();
+    };
     return (
         <div className="flex flex-col items-center justify-between h-dvh py-4">
             <div className="flex flex-col items-center gap-2 w-full">
@@ -27,13 +34,17 @@ export function LeftNav() {
                     <SidebarIcon src="/Search--locate.svg" alt="Explore" to="/" active />
                     <SidebarIcon src="/Chart--candlestick.svg" alt="Charts" />
                     <div className="w-8 h-px my-2 bg-[var(--border)]" />
-                    <SidebarIcon src="/Bookmark-icon.svg" alt="Bookmarks" />
+                    <button onClick={toggleWatchlist} className="flex items-center justify-center h-12">
+                        <img src="/Bookmark-icon.svg" alt="Bookmarks" className={isWatchlistOpen ? 'opacity-100' : 'opacity-50'} width={24} height={24} />
+                    </button>
                 </nav>
             </div>
             <div className="pb-2">
-                <div className="avatar-gradient p-1 rounded-full">
-                    <img src="/main-avatar.png" alt="Me" className="w-10 h-10 rounded-full block" />
-                </div>
+                <NavLink to="/profile" className="block">
+                    <div className="avatar-gradient p-1 rounded-full">
+                        <img src="/main-avatar.png" alt="Me" className="w-10 h-10 rounded-full block" />
+                    </div>
+                </NavLink>
             </div>
         </div>
     );

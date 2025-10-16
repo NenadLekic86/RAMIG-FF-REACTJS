@@ -62,7 +62,7 @@ export function RightSidebar() {
   const isOverBalance = !Number.isNaN(amountValue) && amountValue > balanceUsd;
 
   return (
-    <aside className={`fixed right-0 top-0 z-40 h-dvh w-[440px] border-l border-customGray44 bg-customGray17 shadow-xl ${isRightSidebarClosing ? 'animate-rsb-out' : 'animate-rsb-in'}`}>
+    <aside className={`fixed right-0 top-0 z-40 h-dvh w-[440px] border-l border-customGray44 bg-customGray17 shadow-xl ${isRightSidebarClosing ? 'animate-rsb-out' : 'animate-rsb-in'} overflow-y-auto overflow-x-hidden`}>
       {/* Floating outside close button */}
       <button
         onClick={closeRightSidebar}
@@ -386,7 +386,7 @@ export function RightSidebar() {
           </div>
 
           {/* Bottom meta */}
-          <div className="px-6 grid grid-cols-2 gap-3 text-sm">
+          <div className="p-6 grid grid-cols-2 gap-3 text-sm">
             <div>
               <div className="text-white/44">Close Date:</div>
               <div className="text-white/44 mt-1">Platform:</div>

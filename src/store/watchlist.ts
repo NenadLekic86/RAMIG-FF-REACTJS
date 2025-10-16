@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { CardData } from '../components/Card/Card';
+import type { CardData } from '../models/card';
 
 export interface WatchlistState {
   itemsById: Map<string, CardData>;

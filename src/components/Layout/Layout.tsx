@@ -4,10 +4,11 @@ import { TopNav } from './TopNav.tsx';
 import { RightSidebar } from './RightSidebar.tsx';
 import WatchlistSidebar from '../Watchlist/WatchlistSidebar.tsx';
 import { useUIStore } from '../../store/ui';
+import TerminalOverlay from '../Terminal/TerminalOverlay.tsx';
 import ToastHost from './ToastHost';
 
 export function Layout() {
-  const { isRightSidebarOpen, isRightSidebarClosing, closeRightSidebar, isWatchlistOpen } = useUIStore();
+  const { isRightSidebarOpen, isRightSidebarClosing, closeRightSidebar, isWatchlistOpen, isTerminalOpen } = useUIStore();
   return (
     <div className="relative h-dvh">
       {/* Left Navigation - Fixed position, full height */}
@@ -43,6 +44,8 @@ export function Layout() {
           <RightSidebar />
         </>
       )}
+      {/* Terminal Overlay (no global backdrop so Watchlist remains interactive) */}
+      {isTerminalOpen && <TerminalOverlay />}
       <ToastHost />
     </div>
   );

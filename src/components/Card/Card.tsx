@@ -1,63 +1,11 @@
 import React from 'react';
+import type { Outcome } from '../../models/card';
 import { useWatchlistStore } from '../../store/watchlist';
+// CardData type is now centralized in models but this component also
+// exports a local interface name; avoid re-exporting to prevent conflicts.
+import type { CardData as UnifiedCardData } from '../../models/card';
+import { PROVIDER_CONFIGS } from '../../config/providers';
 
-// Provider configurations with their unique styling
-const PROVIDER_CONFIGS = {
-  kalshi: {
-    icon: "/K-Kalshi.svg",
-    name: 'Kalshi',
-    textColor: 'text-white',
-    bgColor: 'bg-[#179F61]',
-    borderColor: 'border-[#179F61]',
-    borderHex: '#179F61',
-    sparkline: [100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150, 155, 160, 165, 170, 175, 180, 185, 190, 195, 200]
-  },
-  manifold: {
-    icon: "/Manifold.svg",
-    name: 'Manifold',
-    textColor: 'text-white',
-    bgColor: 'bg-[#4337C4]',
-    borderColor: 'border-[#4337C4]',
-    borderHex: '#4337C4',
-    sparkline: [100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150, 155, 160, 165, 170, 175, 180, 185, 190, 195, 200]
-  },
-  limitless: {
-    icon: "/Limitless.svg",
-    name: 'Limitless',
-    textColor: 'text-[#171717]',
-    bgColor: 'bg-[#DCF58D]',
-    borderColor: 'border-[#DCF58D]',
-    borderHex: '#DCF58D',
-    sparkline: [100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150, 155, 160, 165, 170, 175, 180, 185, 190, 195, 200]
-  },
-  predictit: {
-    icon: "/Predictit.svg",
-    name: 'PredictIt',
-    textColor: 'text-white',
-    bgColor: 'bg-[#07A0BA]',
-    borderColor: 'border-[#07A0BA]',
-    borderHex: '#07A0BA',
-    sparkline: [100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150, 155, 160, 165, 170, 175, 180, 185, 190, 195, 200]
-  },
-  polymarket: {
-    icon: "/Polymarket.svg",
-    name: 'Polymarket',
-    textColor: 'text-white',
-    bgColor: 'bg-[#1751F0]',
-    borderColor: 'border-[#1751F0]',
-    borderHex: '#1751F0',
-    sparkline: [100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150, 155, 160, 165, 170, 175, 180, 185, 190, 195, 200]
-  },
-  zeitgeist: {
-    icon: "/Zeitgeist.svg",
-    name: 'Zeitgeist',
-    textColor: 'text-[#171717]',
-    bgColor: 'bg-[#FFFFFF]',
-    borderColor: 'border-[#FFFFFF]',
-    borderHex: '#FFFFFF',
-    sparkline: [100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150, 155, 160, 165, 170, 175, 180, 185, 190, 195, 200]
-  }
-};
 
 // Utilities for deterministic sparkline jittering
 const hashStringToSeed = (key: string) => {
@@ -95,27 +43,10 @@ const jitterSeries = (values: number[] | undefined, amplitudeFraction: number, s
   return result;
 };
 
-export interface CardData {
-  id: string;
-  title: string;
-  description?: string;
-  provider: keyof typeof PROVIDER_CONFIGS;
-  liquidity: string;
-  createdDate: string;
-  imageUrl?: string;
-  iconUrl?: string;
-  yesPercentage: number;
-  noPercentage: number;
-  volume?: string;
-  hasHoverEffect?: boolean;
-  category?: string;
-  endDate?: string;
-  isActive?: boolean;
-  sparkline?: number[];
-}
+// legacy local type removed in favor of models/card CardData
 
 interface CardProps {
-  data: CardData;
+  data: UnifiedCardData;
   onClick?: () => void;
   className?: string;
 }
@@ -135,29 +66,35 @@ const Card: React.FC<CardProps> = ({ data, onClick, className = '' }) => {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
-  const hoverShadowColor = hexToRgba(providerConfig.borderHex, 0.72);
-  const sparkValues = (data.sparkline && data.sparkline.length > 1) ? data.sparkline : providerConfig.sparkline;
+  const hoverShadowColor = hexToRgba(providerConfig.borderHex || providerConfig.bgHex, 0.72);
+  const sparkValues = React.useMemo(() => (
+    (data.sparkline && data.sparkline.length > 1)
+      ? data.sparkline
+      : providerConfig.sparkline || [100,105,110,115,120,125,130,135,140,145,150,155,160,165,170,175,180,185,190,195,200]
+  ), [data.sparkline, providerConfig.sparkline]);
 
   const randomizedSparkValues = React.useMemo(
     () => jitterSeries(sparkValues, 0.18, `${data.id}-${data.provider}`),
     [sparkValues, data.id, data.provider]
   );
 
+  const borderColorHex = providerConfig.borderHex || providerConfig.bgHex;
+
   const cardClasses = `
     relative overflow-hidden transition-all duration-200 cursor-pointer
     ${hasHover ? 'hover:shadow-[0_0_0_4px_var(--hover-shadow-color)]' : ''}
-    card border-1 ${providerConfig.borderColor}
+    card border-1
     ${className}
   `;
 
   const ProviderBadge = () => (
-    <div className={`inline-flex items-center gap-1 px-2 py-2 rounded-bl-lg text-xs font-semibold text-white ${providerConfig.bgColor}`}>
+    <div className={`inline-flex items-center gap-1 px-2 py-2 rounded-bl-lg text-xs font-semibold text-white`} style={{ backgroundColor: providerConfig.bgHex }}>
       <img
           src={providerConfig.icon}
           alt={data.provider}
           className="w-[16px] h-[16px]"
         />
-      <span className={`text-xs font-medium tracking-[0.5%] ${providerConfig.textColor}`}>{providerConfig.name}</span>
+      <span className={`text-xs font-medium tracking-[0.5%] ${providerConfig.textTone === 'dark' ? 'text-[#171717]' : 'text-white'}`}>{providerConfig.label}</span>
     </div>
   );
 
@@ -263,7 +200,11 @@ const Card: React.FC<CardProps> = ({ data, onClick, className = '' }) => {
   });
 
   return (
-    <div className={cardClasses} onClick={onClick} style={{ ['--hover-shadow-color']: hoverShadowColor } as React.CSSProperties}>
+    <div
+      className={cardClasses}
+      onClick={onClick}
+      style={{ ['--hover-shadow-color']: hoverShadowColor, borderColor: borderColorHex } as React.CSSProperties}
+    >
       {/* Card Header */}
       <div className="p-4 space-y-3 mb-4 relative z-10">
         {/* Provider Badge */}
@@ -331,48 +272,33 @@ const Card: React.FC<CardProps> = ({ data, onClick, className = '' }) => {
           </div>
         </div>
 
-        {/* Yes/No Options */}
+        {/* Yes/No Options sourced from centralized outcomes */}
         <div className="space-y-1">
-          <div className="flex flex-row items-center justify-center bg-white/[0.04] backdrop-blur-[6px] px-2 py-0.5 rounded-[8px] gap-2">
-            <div className="basis-2/5 whitespace-nowrap overflow-hidden flex items-center">
-              <span className="text-xs text-white">50+ bps decreased</span>
+          {(data.outcomes ?? []).slice(0, 2).map((o: Outcome) => (
+            <div key={o.label} className="flex flex-row items-center justify-center bg-white/[0.04] backdrop-blur-[6px] px-2 py-0.5 rounded-[8px] gap-2">
+              <div className="basis-2/5 whitespace-nowrap overflow-hidden flex items-center">
+                <span className="text-xs text-white">{o.label}</span>
+              </div>
+              <div className="basis-1/5 flex items-center justify-end">
+                <span className="text-xs font-semibold text-white">{o.probability.toFixed(1)}%</span>
+              </div>
+              <div className="basis-2/5 flex gap-1 items-center justify-end">
+                <button className="p-2 text-[#31D482] text-xs rounded-[8px] border-1 border-[#31D482]/72 hover:bg-green-500/30 transition-colors ">
+                  Yes
+                </button>
+                <button className="p-2 text-[#F97066] text-xs rounded-[8px] border-1 border-[#F97066]/72 hover:bg-red-500/30 transition-colors">
+                  No
+                </button>
+              </div>
             </div>
-            <div className="basis-1/5 flex items-center justify-end">
-              <span className="text-xs font-semibold text-white">80.0%</span>
-            </div>
-            <div className="basis-2/5 flex gap-1 items-center justify-end">
-              <button className="p-2 text-[#31D482] text-xs rounded-[8px] border-1 border-[#31D482]/72 hover:bg-green-500/30 transition-colors ">
-                Yes
-              </button>
-              <button className="p-2 text-[#F97066] text-xs rounded-[8px] border-1 border-[#F97066]/72 hover:bg-red-500/30 transition-colors">
-                No
-              </button>
-            </div>
-          </div>
-
-          <div className="flex flex-row items-center justify-center bg-white/[0.04] backdrop-blur-[6px] px-2 py-0.5 rounded-[8px] gap-2">
-            <div className="basis-2/5 whitespace-nowrap overflow-hidden flex items-center">
-              <span className="text-xs text-white">25+ bps decreased</span>
-            </div>
-            <div className="basis-1/5 flex items-center justify-end">
-              <span className="text-xs font-semibold text-white">20.0%</span>
-            </div>
-            <div className="basis-2/5 flex gap-1 items-center justify-end">
-              <button className="p-2 text-[#31D482] text-xs rounded-[8px] border-1 border-[#31D482]/72 hover:bg-green-500/30 transition-colors ">
-                Yes
-              </button>
-              <button className="p-2 text-[#F97066] text-xs rounded-[8px] border-1 border-[#F97066]/72 hover:bg-red-500/30 transition-colors">
-                No
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
       {randomizedSparkValues && randomizedSparkValues.length > 1 && (
         <div className="absolute bottom-0 left-0 right-0 w-full pointer-events-none z-0">
           <MiniAreaChart
             values={randomizedSparkValues}
-            color={providerConfig.borderHex}
+            color={providerConfig.borderHex || providerConfig.bgHex}
             id={`${data.id}-bg`}
             width={320}
             height={200}

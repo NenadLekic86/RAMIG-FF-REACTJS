@@ -203,6 +203,28 @@ a, button, .btn {
           mask-composite: exclude;
 }
 
+/* Hover-only multi-color gradient border (left → right) */
+.gradient-border-rainbow-hover { position: relative; }
+.gradient-border-rainbow-hover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px; /* border stroke width */
+  background: var(--brand-underline-gradient);
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.gradient-border-rainbow-hover:hover::after { opacity: 1; }
+
+/* Force the gradient border to be visible (for active states) */
+.gradient-border-rainbow-on::after { opacity: 1; }
+
 /* Chart container sizing that needs JS-measured heights later */
 .chart-container { height: 360px; }
 

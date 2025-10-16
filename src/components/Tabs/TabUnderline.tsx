@@ -14,6 +14,8 @@ interface TabUnderlineProps {
   bottom?: number; // px from bottom
   height?: number; // underline thickness
   transitionMs?: number;
+  background?: string; // custom background color or gradient
+  widthScale?: number; // multiply underline width relative to tab width
 }
 
 export default function TabUnderline({
@@ -25,6 +27,8 @@ export default function TabUnderline({
   bottom = 0,
   height = 2,
   transitionMs = 300,
+  background,
+  widthScale = 1,
 }: TabUnderlineProps) {
   const [pos, setPos] = useState<{ left: number; width: number }>({ left: 0, width: 0 });
 
@@ -37,10 +41,14 @@ export default function TabUnderline({
     if (!tabEl) return;
     const cRect = container.getBoundingClientRect();
     const r = tabEl.getBoundingClientRect();
-    const left = r.left - cRect.left + offsetLeft;
-    const width = Math.max(0, r.width - (offsetLeft + offsetRight));
+    const baseLeft = r.left - cRect.left + offsetLeft;
+    const baseWidth = Math.max(0, r.width - (offsetLeft + offsetRight));
+    const width = Math.max(0, baseWidth * widthScale);
+    // Expand symmetrically around the tab when scaling
+    const expandPx = (width - baseWidth) / 2;
+    const left = baseLeft - expandPx;
     setPos({ left, width });
-  }, [activeKey, containerRef, getTabEl, offsetLeft, offsetRight]);
+  }, [activeKey, containerRef, getTabEl, offsetLeft, offsetRight, widthScale]);
 
   useLayoutEffect(() => { measure(); }, [measure]);
   useEffect(() => { measure(); }, [measure]);
@@ -60,6 +68,7 @@ export default function TabUnderline({
         width: pos.width,
         transition: `transform ${transitionMs}ms cubic-bezier(0.22, 1, 0.36, 1), width ${transitionMs}ms cubic-bezier(0.22, 1, 0.36, 1)`,
         willChange: 'transform, width',
+        ...(background ? { background } : {}),
       }}
     />
   );

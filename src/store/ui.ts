@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { CardData } from '../components/Card/Card';
+import type { CardData } from '../models/card';
 
 interface UIState {
   isRightSidebarOpen: boolean;
@@ -12,6 +12,11 @@ interface UIState {
   isWatchlistClosing: boolean;
   openWatchlist: () => void;
   closeWatchlist: () => void;
+  // Full-screen terminal overlay state
+  isTerminalOpen: boolean;
+  isTerminalClosing: boolean;
+  openTerminal: (card: CardData) => void;
+  closeTerminal: () => void;
 }
 
 export const useUIStore = create<UIState>((set, get) => ({
@@ -42,6 +47,20 @@ export const useUIStore = create<UIState>((set, get) => ({
     setTimeout(() => {
       set({ isWatchlistOpen: false, isWatchlistClosing: false });
     }, 200);
+  },
+  // Terminal overlay controls
+  isTerminalOpen: false,
+  isTerminalClosing: false,
+  openTerminal: (card: CardData) => {
+    set({ isTerminalOpen: true, isTerminalClosing: false, selectedCard: card });
+  },
+  closeTerminal: () => {
+    const state = get();
+    if (!state.isTerminalOpen || state.isTerminalClosing) return;
+    set({ isTerminalClosing: true });
+    setTimeout(() => {
+      set({ isTerminalOpen: false, isTerminalClosing: false, selectedCard: null });
+    }, 220);
   },
 }));
 

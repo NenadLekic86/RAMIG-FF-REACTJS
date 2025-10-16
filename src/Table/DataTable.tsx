@@ -9,7 +9,7 @@ export function DataTable<TData extends object>({ columns, data }: Props<TData>)
         {table.getHeaderGroups().map(hg => (
           <tr key={hg.id}>
             {hg.headers.map(h => (
-              <th key={h.id} className="text-left px-3 py-2 border-b border-neutral-800">
+              <th key={h.id} className="text-left text-white/44 font-normal text-[12px] px-3 py-2 border-b border-customGray44">
                 {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
               </th>
             ))}
@@ -18,7 +18,7 @@ export function DataTable<TData extends object>({ columns, data }: Props<TData>)
       </thead>
       <tbody>
         {table.getRowModel().rows.map(r => (
-          <tr key={r.id} className="odd:bg-neutral-950 even:bg-neutral-900">
+          <tr key={r.id} className="">
             {r.getVisibleCells().map(c => (
               <td key={c.id} className="px-3 py-2 border-b border-neutral-800">
                 {flexRender(c.column.columnDef.cell, c.getContext())}
