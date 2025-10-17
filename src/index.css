@@ -119,6 +119,12 @@ a, button, .btn {
   border-color: var(--customBorder);
 }
 
+/* Semi-transparent white divider utilities for lists/tables */
+.border-divider { border-color: rgba(33, 33, 33, 1); }
+.divide-divider > :not([hidden]) ~ :not([hidden]) { border-color: rgba(33, 33, 33, 1); }
+
+/* (removed) semi-transparent white border utility */
+
 .bg-customBg {
   background-color: var(--customBg);
 }
@@ -256,6 +262,12 @@ a, button, .btn {
   /* subtle 1px highlight + layered glows biased to top-left via negative offsets */
   box-shadow:
     1px -1px 0 0 rgba(67, 55, 196, 0.55);
+}
+
+/* Variant with configurable color via CSS variable --corner-shadow-rgb */
+.corner-shadow-tl-colored {
+  box-shadow:
+    1px -1px 0 0 rgba(var(--corner-shadow-rgb, 67,55,196), 0.55);
 }
 
 /* Gradient border utility for buttons (top-left → bottom-right) */

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ConnectMarketModal from '../../../components/Modals/ConnectMarketModal';
 
 type ProviderId = 'manifold' | 'polymarket' | 'limitless' | 'kalshi' | 'predictit' | 'zeitgeist';
 
@@ -13,6 +14,15 @@ type Provider = {
   balanceUsd?: string; // for display only, e.g. "$12,557.55"
   state: 'disconnected' | 'connecting' | 'connected';
 };
+
+function hexToRgbString(hex: string): string {
+  const clean = hex.replace('#', '');
+  const bigint = parseInt(clean, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `${r},${g},${b}`;
+}
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -56,7 +66,7 @@ function LabeledInput({
   readOnly?: boolean;
 }) {
   return (
-    <div className="w-full flex items-center gap-2 rounded-md bg-white/6 px-3 py-3">
+    <div className="w-full flex items-center gap-2 bg-white/6 rounded-[8px] px-3 py-3">
       {label ? (
         <span className="text-[10px] uppercase tracking-wide bg-neutral-800 text-neutral-300 px-2 py-1 rounded">{label}</span>
       ) : icon ? (
@@ -93,7 +103,7 @@ function WithdrawButton() {
   );
 }
 
-function ProviderCard({ p, onUpdate }: { p: Provider; onUpdate: (x: Partial<Provider>) => void }) {
+function ProviderCard({ p, onUpdate, onConnect }: { p: Provider; onUpdate: (x: Partial<Provider>) => void; onConnect: (p: Provider) => void }) {
   // Provider colored icon background (48x48)
   const providerBg: Record<ProviderId, string> = {
     manifold: '#4337C4',
@@ -123,9 +133,17 @@ function ProviderCard({ p, onUpdate }: { p: Provider; onUpdate: (x: Partial<Prov
     p.id === 'zeitgeist'
   );
 
+  // Colored corner shadow style per provider
+  const cardStyle: React.CSSProperties & { ['--corner-shadow-rgb']: string } = {
+    '--corner-shadow-rgb': hexToRgbString(providerBg[p.id]),
+  };
+
   return (
-    <div className="rounded-[12px] border border-customGray44 bg-customGray17 p-4 flex flex-col justify-between gap-4 min-h-[200px] overflow-hidden">
-      <div className="flex items-center justify-between">
+    <div
+      className="rounded-[12px] border border-customGray44 bg-customGray17 flex flex-col justify-between min-h-[210px] overflow-hidden corner-shadow-tl-colored"
+      style={cardStyle}
+    >
+      <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3">
           <div style={logoWrapStyle}>
             <img src={p.logo} alt={p.name} className="w-8 h-8" />
@@ -140,35 +158,80 @@ function ProviderCard({ p, onUpdate }: { p: Provider; onUpdate: (x: Partial<Prov
 
       {/* Inputs area varies by provider */}
       {p.id === 'manifold' && (
-        <LabeledInput label="API" placeholder="Enter API key..." value={p.apiKey ?? ''} onChange={(v) => onUpdate({ apiKey: v })} />
+        <div className="w-full border-t border-customGray44 px-4 py-3">
+          <LabeledInput label="API" placeholder="Enter API key..." value={p.apiKey ?? ''} onChange={(v) => onUpdate({ apiKey: v })} />
+        </div>
+      )}
+      {p.id === 'manifold' && p.mode === 'on' && (
+        <div className="w-full px-4 pb-3 pt-0">
+          <div className="w-full flex items-stretch gap-2">
+            <div className="basis-1/2 min-w-0">
+              <LabeledInput icon="/Wallet.svg" value={p.balanceUsd ?? '$12,557.55'} onChange={() => {}} readOnly />
+            </div>
+            <div className="basis-1/2 min-w-0">
+              <WithdrawButton />
+            </div>
+          </div>
+        </div>
       )}
 
       {p.id === 'polymarket' && (
-        <LabeledInput icon="/Wallet.svg" placeholder="0x9f3a2b4c6d7e8f90123456789abcd..." value={p.address ?? ''} onChange={(v) => onUpdate({ address: v })} />
+        <div className="w-full border-t border-customGray44 px-4 py-3">
+          <LabeledInput icon="/Wallet.svg" placeholder="0x9f3a2b4c6d7e8f90123456789abcd..." value={p.address ?? ''} onChange={(v) => onUpdate({ address: v })} />
+        </div>
+      )}
+      {p.id === 'polymarket' && p.mode === 'on' && (
+        <div className="w-full px-4 pb-3 pt-0">
+          <div className="w-full flex items-stretch gap-2">
+            <div className="basis-1/2 min-w-0">
+              <LabeledInput icon="/Wallet.svg" value={p.balanceUsd ?? '$12,557.55'} onChange={() => {}} readOnly />
+            </div>
+            <div className="basis-1/2 min-w-0">
+              <WithdrawButton />
+            </div>
+          </div>
+        </div>
       )}
 
       {p.id === 'limitless' && (
         <>
-          <LabeledInput icon="/Wallet.svg" placeholder="0x9f3a2b4c6d7e8f90123456789abcd..." value={p.address ?? ''} onChange={(v) => onUpdate({ address: v })} />
+          <div className="w-full border-t border-customGray44 px-4 py-3">
+            <LabeledInput icon="/Wallet.svg" placeholder="0x9f3a2b4c6d7e8f90123456789abcd..." value={p.address ?? ''} onChange={(v) => onUpdate({ address: v })} />
+          </div>
           {p.mode === 'on' && (
-            <div className="w-full flex items-stretch gap-2">
-              <div className="basis-1/2 min-w-0">
-                <LabeledInput icon="/Wallet.svg" value={p.balanceUsd ?? '$12,557.55'} onChange={() => {}} readOnly />
-              </div>
-              <div className="basis-1/2 min-w-0">
-                <WithdrawButton />
+            <div className="w-full px-4 pb-3 pt-0">
+              <div className="w-full flex items-stretch gap-2">
+                <div className="basis-1/2 min-w-0">
+                  <LabeledInput icon="/Wallet.svg" value={p.balanceUsd ?? '$12,557.55'} onChange={() => {}} readOnly />
+                </div>
+                <div className="basis-1/2 min-w-0">
+                  <WithdrawButton />
+                </div>
               </div>
             </div>
           )}
         </>
       )}
 
-      {(p.id === 'kalshi' || p.id === 'predictit' || p.id === 'zeitgeist') && (
-        <div className="pt-1" />
+      {(p.id === 'kalshi' || p.id === 'predictit' || p.id === 'zeitgeist') && p.mode === 'on' && (
+        <div className="w-full px-4 pb-3 pt-0">
+          <div className="w-full flex items-stretch gap-2">
+            <div className="basis-1/2 min-w-0">
+              <LabeledInput icon="/Wallet.svg" value={p.balanceUsd ?? '$12,557.55'} onChange={() => {}} readOnly />
+            </div>
+            <div className="basis-1/2 min-w-0">
+              <WithdrawButton />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Action button (only show when prerequisites provided AND not already connected) */}
-      {hasRequired && p.state !== 'connected' && <ConnectButton state={p.state} />}
+      {hasRequired && p.state !== 'connected' && (
+        <div className="px-4 pb-4">
+          <ConnectButton state={p.state} onClick={() => onConnect(p)} />
+        </div>
+      )}
     </div>
   );
 }
@@ -187,12 +250,32 @@ export default function Markets() {
     setProviders(prev => prev.map(p => (p.id === id ? { ...p, ...patch } : p)));
   };
 
+  const [connectOpen, setConnectOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+
+  const openConnect = (p: Provider) => {
+    setSelectedProvider(p);
+    setConnectOpen(true);
+  };
+
+  const closeConnect = () => {
+    setConnectOpen(false);
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2 min-h-[200px]">
-      {providers.map(p => (
-        <ProviderCard key={p.id} p={p} onUpdate={(x) => updateProvider(p.id, x)} />
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2 min-h-[200px]">
+        {providers.map(p => (
+          <ProviderCard key={p.id} p={p} onUpdate={(x) => updateProvider(p.id, x)} onConnect={openConnect} />
+        ))}
+      </div>
+
+      <ConnectMarketModal
+        open={connectOpen}
+        onClose={closeConnect}
+        provider={selectedProvider ? { id: selectedProvider.id, name: selectedProvider.name, url: selectedProvider.url, address: selectedProvider.address, apiKey: selectedProvider.apiKey } : null}
+      />
+    </>
   );
 }
 
