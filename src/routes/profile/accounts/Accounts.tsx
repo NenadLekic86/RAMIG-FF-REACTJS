@@ -42,7 +42,7 @@ function DepositButton({ onClick }: { onClick?: () => void }) {
 function ProviderRow({ p, onDeposit, onWithdraw }: { p: Provider; onDeposit: (p: Provider) => void; onWithdraw: (p: Provider) => void }) {
     return (
         <div className="rounded-[12px] border border-customGray44 bg-customGray17 px-4 py-4 grid items-center grid-cols-[auto_1fr_auto] gap-3">
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-3 min-w-[250px]">
                 <div
                     className="w-12 h-12 rounded-[8px] flex items-center justify-center shrink-0"
                     style={{ background: p.bgHex }}

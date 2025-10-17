@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 type WithdrawModalProps = {
   open: boolean
@@ -39,6 +39,57 @@ export default function WithdrawModal({
   const [isClosing, setIsClosing] = useState(false)
   const [copied, setCopied] = useState(false)
   const [amount, setAmount] = useState('0.00')
+  const [chainDropdownOpen, setChainDropdownOpen] = useState(false)
+  const [selectedChain, setSelectedChain] = useState(chainName)
+  const chainDropdownRef = useRef<HTMLDivElement | null>(null)
+  const chainOptions = ['Option 1', 'Option 2', 'Option 3', 'Option 4']
+
+  const sanitizeAmount = (value: string) => {
+    let next = value.replace(/[^\d.]/g, '')
+    const firstDot = next.indexOf('.')
+    if (firstDot !== -1) {
+      next = next.slice(0, firstDot + 1) + next.slice(firstDot + 1).replace(/\./g, '')
+    }
+    if (next.startsWith('.')) {
+      next = `0${next}`
+    }
+    return next
+  }
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAmount(sanitizeAmount(e.target.value))
+  }
+
+  const handleAmountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const allowedControlKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Tab']
+    if (allowedControlKeys.includes(e.key)) return
+    if (e.key >= '0' && e.key <= '9') return
+    if (e.key === '.') {
+      const input = e.currentTarget
+      const hasDot = input.value.includes('.')
+      const selection = input.value.substring(input.selectionStart ?? 0, input.selectionEnd ?? 0)
+      // Allow dot if none exists or selected text contains the existing dot
+      if (!hasDot || selection.includes('.')) return
+    }
+    e.preventDefault()
+  }
+
+  const handleAmountPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault()
+    const pasted = e.clipboardData.getData('text')
+    const sanitized = sanitizeAmount(pasted)
+    const target = e.currentTarget
+    const start = target.selectionStart ?? target.value.length
+    const end = target.selectionEnd ?? target.value.length
+    const nextValue = sanitizeAmount(target.value.slice(0, start) + sanitized + target.value.slice(end))
+    setAmount(nextValue)
+  }
+
+  const handleAmountBlur = () => {
+    if (!amount || amount.trim() === '') {
+      setAmount('0.00')
+    }
+  }
 
   useEffect(() => {
     if (open) {
@@ -50,6 +101,18 @@ export default function WithdrawModal({
       return () => clearTimeout(t)
     }
   }, [open, isVisible])
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (chainDropdownRef.current && !chainDropdownRef.current.contains(e.target as Node)) {
+        setChainDropdownOpen(false)
+      }
+    }
+    if (chainDropdownOpen) {
+      document.addEventListener('mousedown', onClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [chainDropdownOpen])
 
   const handleCopy = async () => {
     try {
@@ -89,12 +152,38 @@ export default function WithdrawModal({
                 <Label>Supported chain</Label>
                 <div className="text-white/40 text-sm">$3 min.</div>
               </div>
-              <div className="h-11 px-3 rounded-[10px] bg-white/6 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <img src={chainIconSrc} alt={chainName} className="w-5 h-5" />
-                  <span className="text-[15px]">{chainName}</span>
-                </div>
-                <img src="/Chevron--sort.svg" alt="select" className="w-4 h-4 opacity-70" />
+              <div ref={chainDropdownRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setChainDropdownOpen((v) => !v)}
+                  className="h-11 w-full px-3 rounded-[10px] bg-white/6 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <img src={chainIconSrc} alt={selectedChain} className="w-5 h-5" />
+                    <span className="text-[15px]">{selectedChain}</span>
+                  </div>
+                  <img src="/Chevron--sort.svg" alt="select" className="w-4 h-4 opacity-70" />
+                </button>
+                {chainDropdownOpen ? (
+                  <div className="absolute z-10 mt-2 w-full rounded-[10px] border border-[#212121] bg-[#0F0F10] shadow-lg overflow-hidden">
+                    <ul className="max-h-60 overflow-auto py-1">
+                      {chainOptions.map((opt) => (
+                        <li key={opt}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedChain(opt)
+                              setChainDropdownOpen(false)
+                            }}
+                            className="w-full text-left px-3 py-2 text-[14px] hover:bg-white/10"
+                          >
+                            {opt}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -120,8 +209,12 @@ export default function WithdrawModal({
                 <img src={tokenIconSrc} alt={tokenSymbol} className="w-5 h-5" />
                 <input
                   className="w-full bg-transparent outline-none text-[15px]"
+                  inputMode="decimal"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onKeyDown={handleAmountKeyDown}
+                  onChange={handleAmountChange}
+                  onPaste={handleAmountPaste}
+                  onBlur={handleAmountBlur}
                 />
               </div>
             </div>

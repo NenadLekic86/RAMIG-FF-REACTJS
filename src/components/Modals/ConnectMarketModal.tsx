@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 type ProviderId = 'manifold' | 'polymarket' | 'limitless' | 'kalshi' | 'predictit' | 'zeitgeist'
 
@@ -126,6 +126,14 @@ const buildStepsForProvider = (provider?: ConnectMarketModalProvider | null): St
 const ConnectMarketModal: React.FC<ConnectMarketModalProps> = ({ open, onClose, provider, onActionClick }) => {
   const [isVisible, setIsVisible] = useState(open)
   const [isClosing, setIsClosing] = useState(false)
+  const [tokenDropdownOpen, setTokenDropdownOpen] = useState(false)
+  const [chainDropdownOpen, setChainDropdownOpen] = useState(false)
+  const [selectedToken, setSelectedToken] = useState<string>('USDC')
+  const [selectedChain, setSelectedChain] = useState<string>('Polygon')
+  const tokenDropdownRef = useRef<HTMLDivElement | null>(null)
+  const chainDropdownRef = useRef<HTMLDivElement | null>(null)
+  const tokenOptions = ['Option 1', 'Option 2', 'Option 3']
+  const chainOptions = ['Option 1', 'Option 2', 'Option 3']
 
   useEffect(() => {
     if (open) {
@@ -137,6 +145,21 @@ const ConnectMarketModal: React.FC<ConnectMarketModalProps> = ({ open, onClose, 
       return () => clearTimeout(t)
     }
   }, [open, isVisible])
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (tokenDropdownRef.current && !tokenDropdownRef.current.contains(e.target as Node)) {
+        setTokenDropdownOpen(false)
+      }
+      if (chainDropdownRef.current && !chainDropdownRef.current.contains(e.target as Node)) {
+        setChainDropdownOpen(false)
+      }
+    }
+    if (tokenDropdownOpen || chainDropdownOpen) {
+      document.addEventListener('mousedown', onClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [tokenDropdownOpen, chainDropdownOpen])
 
   const steps = useMemo(() => buildStepsForProvider(provider), [provider])
 
@@ -166,6 +189,81 @@ const ConnectMarketModal: React.FC<ConnectMarketModalProps> = ({ open, onClose, 
 
           {/* Content */}
           <div className="px-5 md:px-6 py-2 md:py-3 overflow-auto">
+            {/* Token / Chain dropdowns */}
+            <div className="px-1 pb-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Supported token */}
+                <div>
+                  <div className="text-[14px] tracking-wide text-white/50 mb-1">Supported token</div>
+                  <div ref={tokenDropdownRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setTokenDropdownOpen((v) => !v)}
+                      className="h-11 w-full px-3 rounded-[10px] bg-white/6 flex items-center justify-between"
+                    >
+                      <span className="text-[15px]">{selectedToken}</span>
+                      <img src="/Chevron--sort.svg" alt="select" className="w-4 h-4 opacity-70" />
+                    </button>
+                    {tokenDropdownOpen ? (
+                      <div className="absolute z-10 mt-2 w-full rounded-[10px] border border-[#212121] bg-[#0F0F10] shadow-lg overflow-hidden">
+                        <ul className="max-h-60 overflow-auto py-1">
+                          {tokenOptions.map((opt) => (
+                            <li key={opt}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedToken(opt)
+                                  setTokenDropdownOpen(false)
+                                }}
+                                className="w-full text-left px-3 py-2 text-[14px] hover:bg-white/10"
+                              >
+                                {opt}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Supported chain */}
+                <div>
+                  <div className="text-[14px] tracking-wide text-white/50 mb-1">Supported chain</div>
+                  <div ref={chainDropdownRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setChainDropdownOpen((v) => !v)}
+                      className="h-11 w-full px-3 rounded-[10px] bg-white/6 flex items-center justify-between"
+                    >
+                      <span className="text-[15px]">{selectedChain}</span>
+                      <img src="/Chevron--sort.svg" alt="select" className="w-4 h-4 opacity-70" />
+                    </button>
+                    {chainDropdownOpen ? (
+                      <div className="absolute z-10 mt-2 w-full rounded-[10px] border border-[#212121] bg-[#0F0F10] shadow-lg overflow-hidden">
+                        <ul className="max-h-60 overflow-auto py-1">
+                          {chainOptions.map((opt) => (
+                            <li key={opt}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedChain(opt)
+                                  setChainDropdownOpen(false)
+                                }}
+                                className="w-full text-left px-3 py-2 text-[14px] hover:bg-white/10"
+                              >
+                                {opt}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {steps.map((s, idx) => (
               <React.Fragment key={s.id}>
                 {idx > 0 && <Divider />}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 type DepositModalProps = {
   open: boolean
@@ -38,6 +38,14 @@ export default function DepositModal({
   const [isVisible, setIsVisible] = useState(open)
   const [isClosing, setIsClosing] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [tokenDropdownOpen, setTokenDropdownOpen] = useState(false)
+  const [selectedToken, setSelectedToken] = useState(tokenSymbol)
+  const [chainDropdownOpen, setChainDropdownOpen] = useState(false)
+  const [selectedChain, setSelectedChain] = useState(chainName)
+  const tokenDropdownRef = useRef<HTMLDivElement | null>(null)
+  const chainDropdownRef = useRef<HTMLDivElement | null>(null)
+  const tokenOptions = ['Option 1', 'Option 2', 'Option 3', 'Option 4']
+  const chainOptions = ['Option 1', 'Option 2', 'Option 3', 'Option 4']
 
   useEffect(() => {
     if (open) {
@@ -49,6 +57,21 @@ export default function DepositModal({
       return () => clearTimeout(t)
     }
   }, [open, isVisible])
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (tokenDropdownRef.current && !tokenDropdownRef.current.contains(e.target as Node)) {
+        setTokenDropdownOpen(false)
+      }
+      if (chainDropdownRef.current && !chainDropdownRef.current.contains(e.target as Node)) {
+        setChainDropdownOpen(false)
+      }
+    }
+    if (tokenDropdownOpen || chainDropdownOpen) {
+      document.addEventListener('mousedown', onClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [tokenDropdownOpen, chainDropdownOpen])
 
   const handleCopy = async () => {
     try {
@@ -100,12 +123,38 @@ export default function DepositModal({
             <div className="flex flex-row gap-3 items-end">
               <div className="basis-1/2">
                 <Label>Supported token</Label>
-                <div className="h-11 px-3 rounded-[10px] bg-white/6 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <img src={tokenIconSrc} alt={tokenSymbol} className="w-5 h-5" />
-                    <span className="text-[15px]">{tokenSymbol}</span>
-                  </div>
-                  <img src="/Chevron--sort.svg" alt="select" className="w-4 h-4 opacity-70" />
+                <div ref={tokenDropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setTokenDropdownOpen((v) => !v)}
+                    className="h-11 w-full px-3 rounded-[10px] bg-white/6 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <img src={tokenIconSrc} alt={selectedToken} className="w-5 h-5" />
+                      <span className="text-[15px]">{selectedToken}</span>
+                    </div>
+                    <img src="/Chevron--sort.svg" alt="select" className="w-4 h-4 opacity-70" />
+                  </button>
+                  {tokenDropdownOpen ? (
+                    <div className="absolute z-10 mt-2 w-full rounded-[10px] border border-[#212121] bg-[#0F0F10] shadow-lg overflow-hidden">
+                      <ul className="max-h-60 overflow-auto py-1">
+                        {tokenOptions.map((opt) => (
+                          <li key={opt}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedToken(opt)
+                                setTokenDropdownOpen(false)
+                              }}
+                              className="w-full text-left px-3 py-2 text-[14px] hover:bg-white/10"
+                            >
+                              {opt}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -114,12 +163,38 @@ export default function DepositModal({
                   <Label>Supported chain</Label>
                   <div className="text-white/40 text-sm">$3 min.</div>
                 </div>
-                <div className="h-11 px-3 rounded-[10px] bg-white/6 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <img src={chainIconSrc} alt={chainName} className="w-5 h-5" />
-                    <span className="text-[15px]">{chainName}</span>
-                  </div>
-                  <img src="/Chevron--sort.svg" alt="select" className="w-4 h-4 opacity-70" />
+                <div ref={chainDropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setChainDropdownOpen((v) => !v)}
+                    className="h-11 w-full px-3 rounded-[10px] bg-white/6 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <img src={chainIconSrc} alt={selectedChain} className="w-5 h-5" />
+                      <span className="text-[15px]">{selectedChain}</span>
+                    </div>
+                    <img src="/Chevron--sort.svg" alt="select" className="w-4 h-4 opacity-70" />
+                  </button>
+                  {chainDropdownOpen ? (
+                    <div className="absolute z-10 mt-2 w-full rounded-[10px] border border-[#212121] bg-[#0F0F10] shadow-lg overflow-hidden">
+                      <ul className="max-h-60 overflow-auto py-1">
+                        {chainOptions.map((opt) => (
+                          <li key={opt}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedChain(opt)
+                                setChainDropdownOpen(false)
+                              }}
+                              className="w-full text-left px-3 py-2 text-[14px] hover:bg-white/10"
+                            >
+                              {opt}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
