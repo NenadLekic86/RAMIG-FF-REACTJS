@@ -6,17 +6,31 @@ interface UIState {
   isRightSidebarClosing: boolean;
   selectedCard: CardData | null;
   openRightSidebar: (card: CardData) => void;
+  openRightSidebarWithOutcome: (card: CardData, outcomeLabel: string, tradeTab: 'buy' | 'sell') => void;
   closeRightSidebar: () => void;
+  closeRightSidebarImmediate: () => void;
+  rightSidebarPreset: {
+    view: 'detail';
+    outcomeLabel?: string;
+    tradeTab?: 'buy' | 'sell';
+  } | null;
+  setRightSidebarPreset: (p: UIState['rightSidebarPreset']) => void;
+  clearRightSidebarPreset: () => void;
   // Watchlist sidebar state
   isWatchlistOpen: boolean;
   isWatchlistClosing: boolean;
   openWatchlist: () => void;
   closeWatchlist: () => void;
+  closeWatchlistImmediate: () => void;
+  // Watchlist width (px)
+  watchlistWidth: number;
+  setWatchlistWidth: (w: number) => void;
   // Full-screen terminal overlay state
   isTerminalOpen: boolean;
   isTerminalClosing: boolean;
   openTerminal: (card: CardData) => void;
   closeTerminal: () => void;
+  closeTerminalImmediate: () => void;
 }
 
 export const useUIStore = create<UIState>((set, get) => ({
@@ -27,15 +41,34 @@ export const useUIStore = create<UIState>((set, get) => ({
     // Reset closing state and open
     set({ isRightSidebarOpen: true, isRightSidebarClosing: false, selectedCard: card });
   },
+  openRightSidebarWithOutcome: (card: CardData, outcomeLabel: string, tradeTab: 'buy' | 'sell') => {
+    set({
+      isRightSidebarOpen: true,
+      isRightSidebarClosing: false,
+      selectedCard: card,
+      rightSidebarPreset: { view: 'detail', outcomeLabel, tradeTab },
+    });
+  },
   closeRightSidebar: () => {
     const state = get();
     if (!state.isRightSidebarOpen || state.isRightSidebarClosing) return; // no-op
     set({ isRightSidebarClosing: true });
     // Wait for CSS animation to complete before unmounting
     setTimeout(() => {
-      set({ isRightSidebarOpen: false, isRightSidebarClosing: false, selectedCard: null });
-    }, 220);
+      const stillTerminalOpen = get().isTerminalOpen;
+      set({
+        isRightSidebarOpen: false,
+        isRightSidebarClosing: false,
+        ...(stillTerminalOpen ? {} : { selectedCard: null }),
+      });
+    }, 260);
   },
+  closeRightSidebarImmediate: () => {
+    set({ isRightSidebarOpen: false, isRightSidebarClosing: false });
+  },
+  rightSidebarPreset: null,
+  setRightSidebarPreset: (p) => set({ rightSidebarPreset: p }),
+  clearRightSidebarPreset: () => set({ rightSidebarPreset: null }),
   // Watchlist sidebar controls
   isWatchlistOpen: false,
   isWatchlistClosing: false,
@@ -46,8 +79,14 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ isWatchlistClosing: true });
     setTimeout(() => {
       set({ isWatchlistOpen: false, isWatchlistClosing: false });
-    }, 200);
+    }, 260);
   },
+  closeWatchlistImmediate: () => {
+    set({ isWatchlistOpen: false, isWatchlistClosing: false });
+  },
+  // Watchlist width (defaults to 320 on first use)
+  watchlistWidth: 320,
+  setWatchlistWidth: (w: number) => set({ watchlistWidth: Math.max(320, Math.min(720, Math.round(w))) }),
   // Terminal overlay controls
   isTerminalOpen: false,
   isTerminalClosing: false,
@@ -60,7 +99,10 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ isTerminalClosing: true });
     setTimeout(() => {
       set({ isTerminalOpen: false, isTerminalClosing: false, selectedCard: null });
-    }, 220);
+    }, 300);
+  },
+  closeTerminalImmediate: () => {
+    set({ isTerminalOpen: false, isTerminalClosing: false, selectedCard: null });
   },
 }));
 
@@ -85,7 +127,7 @@ export const useToast = create<ToastState>((set, get) => ({
     const id = Math.random().toString(36).slice(2);
     const item: ToastItem = { id, ...t } as ToastItem;
     set({ toasts: [item, ...get().toasts].slice(0, 5) });
-    // Auto-clear processing after 1.5s, others after 3.2s
+    // Auto-clear processing after 3s, others after 5s
     const timeout = t.type === 'processing' ? 3000 : 5000;
     setTimeout(() => {
       const { removeToast } = get();

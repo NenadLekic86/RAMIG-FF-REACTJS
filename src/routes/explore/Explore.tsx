@@ -8,7 +8,6 @@ import TabUnderline from '../../components/Tabs/TabUnderline.tsx';
 import { useProviderFilters, type ProviderKey } from '../../store/filters';
 import { filterByQuery } from '../../utils/search';
 
-// Sample market data - centralized in models/card for now
 const sampleMarketData: CardData[] = demoCards;
 
 export default function Explore() {
@@ -18,6 +17,7 @@ export default function Explore() {
     const openRightSidebar = useUIStore(s => s.openRightSidebar);
     const openWatchlist = useUIStore(s => s.openWatchlist);
     const isWatchlistOpen = useUIStore(s => s.isWatchlistOpen);
+    const isRightSidebarOpen = useUIStore(s => s.isRightSidebarOpen);
     const exploreTabsRef = useRef<HTMLDivElement>(null);
     const providerFilters = useProviderFilters();
 
@@ -60,7 +60,7 @@ export default function Explore() {
 
         {/* Search & Filters */}
         <div className="mt-12 flex items-center gap-3">
-            <div className="">
+            <div>
                 <div className="h-10 rounded-[8px] bg-customGray17 flex items-center pr-6 pl-4 gap-2">
                     <img src="/Search-icon.svg" alt="Search" className="opacity-[72%]" width={18} height={18} />
                     <input
@@ -98,7 +98,11 @@ export default function Explore() {
         </div>
 
         {/* Market cards */}
-        <section className={`grid gap-2 sm:grid-cols-2 md:grid-cols-3 ${isWatchlistOpen ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>
+        <section
+            className={`grid gap-2 sm:grid-cols-2 md:grid-cols-3 
+            ${isWatchlistOpen && isRightSidebarOpen ? 'xl:grid-cols-2' : (isWatchlistOpen || isRightSidebarOpen ? 'xl:grid-cols-3' : 'xl:grid-cols-4')} 
+            3xl:grid-cols-6 ${isRightSidebarOpen ? 'xl:pr-[440px]' : ''}`}
+        >
             {useMemo(() => {
                 const selected = providerFilters.selectedProviders;
                 const base = selected.size === 0

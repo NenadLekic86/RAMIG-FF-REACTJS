@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import SignUpModal from "../Modals/SignUpModal";
 import RestoreAccountModal from "../Modals/RestoreAccountModal";
 import GenerateAccountModal from "../Modals/GenerateAccountModal";
+import { demoCards, type CardData, getProviderIcon, getProviderLabel } from "../../models/card";
+import { providerBalances } from "../../models/accounts";
+import { useNavigate } from "react-router-dom";
+import { useUIStore } from "../../store/ui";
 
 type TabKey = "positions" | "balances";
 
@@ -12,6 +16,7 @@ interface TopNavItem {
     changeText: string;
     changeClassName: string;
     tag: string;
+    card?: CardData;
 }
 
 export function TopNav() {
@@ -19,60 +24,41 @@ export function TopNav() {
     const [isSignUpOpen, setIsSignUpOpen] = useState(false);
     const [isRestoreOpen, setIsRestoreOpen] = useState(false);
     const [isGenerateOpen, setIsGenerateOpen] = useState(false);
+    const openWatchlist = useUIStore(s => s.openWatchlist);
+    const openTerminal = useUIStore(s => s.openTerminal);
+    // Instant-close variants to avoid layout lag on navigation
+    const closeWatchlistImmediate = useUIStore(s => s.closeWatchlistImmediate);
+    const closeRightSidebarImmediate = useUIStore(s => s.closeRightSidebarImmediate);
+    const closeTerminalImmediate = useUIStore(s => s.closeTerminalImmediate);
+    const navigate = useNavigate();
 
-    const positionItems: TopNavItem[] = [
-        {
-            id: "pos-1",
-            icon: "/icon-3.png",
-            title: "Fed decision in September?",
-            changeText: "+1.45%",
-            changeClassName: "text-green-700",
-            tag: "Bitcoin",
-        },
-        {
-            id: "pos-2",
-            icon: "/icon-2.svg",
-            title: "ETH Merge Anniversary",
-            changeText: "-1.14%",
-            changeClassName: "text-red-700",
-            tag: "Bitcoin",
-        },
-        {
-            id: "pos-3",
-            icon: "/icon-1.svg",
-            title: "CPI Release",
-            changeText: "+0.53%",
-            changeClassName: "text-green-700",
-            tag: "Bitcoin",
-        },
-    ];
+    const positionItems: TopNavItem[] = useMemo(() => {
+        const cards = demoCards.filter(c => !!c.position).slice(0, 3);
+        return cards.map((c) => {
+            const pnl = c.position?.pnl ?? '';
+            const isPositive = pnl.startsWith('+');
+            return {
+                id: `pos-${c.id}`,
+                icon: getProviderIcon(c.provider),
+                title: c.title,
+                changeText: pnl || `${Math.round(c.yesPercentage ?? 0)}%`,
+                changeClassName: pnl ? (isPositive ? "text-green-700" : "text-red-700") : "text-white/50",
+                tag: getProviderLabel(c.provider),
+                card: c,
+            } as TopNavItem;
+        });
+    }, []);
 
-    const balanceItems: TopNavItem[] = [
-        {
-            id: "bal-1",
-            icon: "/Manifold.svg",
-            title: "Manifold",
-            changeText: "$12,572.50",
+    const balanceItems: TopNavItem[] = useMemo(() => {
+        return providerBalances.slice(0, 6).map((p, idx) => ({
+            id: `bal-${idx + 1}`,
+            icon: p.logo,
+            title: p.name,
+            changeText: p.balanceUsd,
             changeClassName: "text-white/50",
-            tag: "$12,572.50",
-        },
-        {
-            id: "bal-2",
-            icon: "/Limitless.svg",
-            title: "Limitless",
-            changeText: "+0.00%",
-            changeClassName: "text-white/50",
-            tag: "$8,359.23",
-        },
-        {
-            id: "bal-3",
-            icon: "/Zeitgeist.svg",
-            title: "Zeitgeist",
-            changeText: "+0.00%",
-            changeClassName: "text-white/50",
-            tag: "$4,304.99",
-        },
-    ];
+            tag: p.balanceUsd,
+        }));
+    }, []);
 
     const itemsToRender = activeTab === "positions" ? positionItems : balanceItems;
 
@@ -120,7 +106,7 @@ export function TopNav() {
     return (
         <div className="w-full">
             <div className="pl-4 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 overflow-x-auto scroll-thin">
+                <div className="flex-1 min-w-0 flex items-center gap-3 overflow-x-auto scroll-thin whitespace-nowrap">
                     <div className="flex items-center border-r border-white/10">
                         <button
                             type="button"
@@ -140,15 +126,35 @@ export function TopNav() {
                         </button>
                     </div>
                     {itemsToRender.map((item) => (
-                        <div key={item.id} className="flex items-center">
+                        <div
+                            key={item.id}
+                            className="flex items-center cursor-pointer shrink-0"
+                            onClick={() => {
+                                if (activeTab === "positions" && item.card) {
+                                    openWatchlist();
+                                    openTerminal(item.card);
+                                    return;
+                                }
+                                if (activeTab === "balances") {
+                                    // Instantly remove overlays to prevent layout lag before navigation
+                                    if (closeTerminalImmediate) closeTerminalImmediate();
+                                    if (closeRightSidebarImmediate) closeRightSidebarImmediate();
+                                    if (closeWatchlistImmediate) closeWatchlistImmediate();
+                                    navigate('/profile/accounts');
+                                }
+                            }}
+                        >
                             {renderItemIcon(item)}
-                            <span className={`pl-2 text-xs ${activeTab === "balances" ? "text-white/44" : ""}`}>
+                            <span className={`pl-2 text-xs whitespace-nowrap ${activeTab === "balances" ? "text-white/44" : ""}`}>
                                 {item.title}
                                 {activeTab === "positions" && (
                                     <span className={`pl-1 ${item.changeClassName}`}>{item.changeText}</span>
                                 )}
+                                {activeTab === "balances" && (
+                                    <span className={`pl-1 ${item.changeClassName}`}>{item.changeText}</span>
+                                )}
                             </span>
-                            <span className="flex items-center text-xs gap-1 ml-1">
+                            {/* <span className="flex items-center text-xs gap-1 ml-1">
                                 {activeTab === "positions" ? (
                                     <>
                                         <span className="px-1">x</span>
@@ -157,7 +163,7 @@ export function TopNav() {
                                 ) : (
                                     <>{item.tag}</>
                                 )}
-                            </span>
+                            </span> */}
                         </div>
                     ))}
                 </div>

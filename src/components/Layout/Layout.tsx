@@ -8,7 +8,7 @@ import TerminalOverlay from '../Terminal/TerminalOverlay.tsx';
 import ToastHost from './ToastHost';
 
 export function Layout() {
-  const { isRightSidebarOpen, isRightSidebarClosing, closeRightSidebar, isWatchlistOpen, isTerminalOpen } = useUIStore();
+  const { isRightSidebarOpen, isWatchlistOpen, isTerminalOpen, watchlistWidth } = useUIStore();
   return (
     <div className="relative h-dvh">
       {/* Left Navigation - Fixed position, full height */}
@@ -22,9 +22,9 @@ export function Layout() {
       </div>
 
       {/* Main Content Area - Accounts for fixed elements */}
-      <main className={`h-dvh overflow-hidden flex flex-col pt-[57px] lg:ml-[80px]`}>
+      <main className={`h-dvh overflow-hidden flex flex-col pt-[37px] lg:ml-[80px]`}>
         {/* Scrollable content area only */}
-        <div className={`flex-1 overflow-y-auto p-4 ${isWatchlistOpen ? 'lg:ml-[320px]' : ''}`}>
+        <div className={`flex-1 overflow-y-auto p-4`} style={{ marginLeft: isWatchlistOpen ? (watchlistWidth) : undefined }}>
           <Outlet />
         </div>
       </main>
@@ -34,16 +34,8 @@ export function Layout() {
         <WatchlistSidebar />
       )}
 
-      {/* Right Sidebar */}
-      {isRightSidebarOpen && (
-        <>
-          <div
-            className={`fixed inset-0 z-30 bg-black/40 ${isRightSidebarClosing ? 'animate-backdrop-out' : 'animate-backdrop-fade'}`}
-            onClick={closeRightSidebar}
-          />
-          <RightSidebar />
-        </>
-      )}
+      {/* Right Sidebar (no backdrop to keep the grid clickable) */}
+      {isRightSidebarOpen && <RightSidebar />}
       {/* Terminal Overlay (no global backdrop so Watchlist remains interactive) */}
       {isTerminalOpen && <TerminalOverlay />}
       <ToastHost />

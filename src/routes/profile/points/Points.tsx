@@ -1,5 +1,5 @@
 export default function Points() {
-  const totalPoints = 318315; // placeholder for now
+  const totalPoints = 318315;
   const twitterHandle = 'STOIIC';
   const discordHandle = 'STOICC_';
 

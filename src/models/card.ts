@@ -6,8 +6,8 @@ export interface CardData {
   title: string;
   description?: string;
   provider: ProviderKey;
-  liquidity: string; // display formatted for now
-  createdDate: string; // display formatted for now
+  liquidity: string;
+  createdDate: string;
   imageUrl?: string;
   yesPercentage: number;
   noPercentage: number;
@@ -16,10 +16,8 @@ export interface CardData {
   endDate?: string;
   sparkline?: number[];
   outcomes?: Outcome[];
-  // UI-only flags used by components
   hasHoverEffect?: boolean;
   isActive?: boolean;
-  // Optional demo position fields for Positions tab; will be sourced from API later
   position?: {
     status: 'active' | 'history';
     side: 'buy' | 'sell';
@@ -40,19 +38,11 @@ export interface Outcome {
 export function getProviderIcon(provider: ProviderKey): string {
   return PROVIDER_CONFIGS[provider].icon;
 }
-export function getProviderBgHex(provider: ProviderKey): string {
-  return PROVIDER_CONFIGS[provider].bgHex;
-}
 export function getProviderLabel(provider: ProviderKey): string {
   return PROVIDER_CONFIGS[provider].label;
 }
 
-export function formatPercent(n?: number): string {
-  const v = typeof n === 'number' ? n : 0;
-  return `${Math.round(v)}%`;
-}
-
-// Demo fixtures for local development; will be replaced by API fetch
+// Demo market data fixtures
 export const demoCards: CardData[] = [
   { id: '1', title: 'US inflation below 3% by Dec 2025?', description: 'Will YoY CPI fall under 3% by December 2025?', provider: 'kalshi', liquidity: '$2.3M', createdDate: '05 Feb, 2025', imageUrl: '/placeholder_img.png', yesPercentage: 42, noPercentage: 58, category: 'Economy', position: { status: 'active', side: 'sell', size: '1,580¢', sold: '1,000¢', remaining: '580¢', pnl: '-15.83%' }, outcomes: [
     { label: '50+ bps decreased', probability: 42, volume: '$20,660,050' },

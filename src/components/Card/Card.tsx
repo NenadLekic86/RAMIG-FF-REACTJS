@@ -1,49 +1,9 @@
 import React from 'react';
 import type { Outcome } from '../../models/card';
 import { useWatchlistStore } from '../../store/watchlist';
-// CardData type is now centralized in models but this component also
-// exports a local interface name; avoid re-exporting to prevent conflicts.
 import type { CardData as UnifiedCardData } from '../../models/card';
 import { PROVIDER_CONFIGS } from '../../config/providers';
-
-
-// Utilities for deterministic sparkline jittering
-const hashStringToSeed = (key: string) => {
-  let hash = 2166136261;
-  for (let i = 0; i < key.length; i++) {
-    hash ^= key.charCodeAt(i);
-    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
-  }
-  return hash >>> 0;
-};
-
-const seededRandom = (initialSeed: number) => {
-  let seed = initialSeed >>> 0;
-  return () => {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    return (seed & 0xffffffff) / 0xffffffff;
-  };
-};
-
-const jitterSeries = (values: number[] | undefined, amplitudeFraction: number, seedKey: string) => {
-  if (!values || values.length === 0) return values ?? [];
-  const seed = hashStringToSeed(seedKey);
-  const rand = seededRandom(seed);
-  const result: number[] = [];
-  let drift = 0;
-  for (let i = 0; i < values.length; i++) {
-    drift += (rand() - 0.5) * 0.25;
-    if (drift > 1) drift = 1;
-    if (drift < -1) drift = -1;
-    const noise = (rand() - 0.5) * 2;
-    const factor = 1 + amplitudeFraction * (0.6 * drift + 0.4 * noise);
-    const v = Math.max(0, values[i] * factor);
-    result.push(v);
-  }
-  return result;
-};
-
-// legacy local type removed in favor of models/card CardData
+import { useUIStore } from '../../store/ui';
 
 interface CardProps {
   data: UnifiedCardData;
@@ -67,22 +27,15 @@ const Card: React.FC<CardProps> = ({ data, onClick, className = '' }) => {
   };
 
   const hoverShadowColor = hexToRgba(providerConfig.borderHex || providerConfig.bgHex, 0.72);
-  const sparkValues = React.useMemo(() => (
-    (data.sparkline && data.sparkline.length > 1)
-      ? data.sparkline
-      : providerConfig.sparkline || [100,105,110,115,120,125,130,135,140,145,150,155,160,165,170,175,180,185,190,195,200]
-  ), [data.sparkline, providerConfig.sparkline]);
-
-  const randomizedSparkValues = React.useMemo(
-    () => jitterSeries(sparkValues, 0.18, `${data.id}-${data.provider}`),
-    [sparkValues, data.id, data.provider]
-  );
+  const selectedCardId = useUIStore((s) => s.selectedCard?.id);
+  const isActiveCard = selectedCardId === data.id;
 
   const borderColorHex = providerConfig.borderHex || providerConfig.bgHex;
 
   const cardClasses = `
     relative overflow-hidden transition-all duration-200 cursor-pointer
     ${hasHover ? 'hover:shadow-[0_0_0_4px_var(--hover-shadow-color)]' : ''}
+    ${isActiveCard ? 'shadow-[0_0_0_4px_var(--hover-shadow-color)]' : ''}
     card border-1
     ${className}
   `;
@@ -98,106 +51,7 @@ const Card: React.FC<CardProps> = ({ data, onClick, className = '' }) => {
     </div>
   );
 
-  const MiniAreaChart: React.FC<{
-    values: number[];
-    color: string;
-    width?: number;
-    height?: number;
-    id: string;
-    startAtY?: number; // optional vertical anchor in px from top
-    endAtY?: number; // optional right edge anchor in px from top
-  }> = React.memo(({ values, color, width = 300, height = 56, id, startAtY, endAtY }) => {
-    if (!values || values.length < 2) return null;
-
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const range = max - min || 1;
-    const normalized = values.map(v => (v - min) / range);
-
-    const leftPad = 1;
-    const rightPad = 1;
-    const topPad = 1;
-    const bottomPad = 1;
-
-    const innerW = width - leftPad - rightPad;
-    const innerH = height - topPad - bottomPad;
-    const xStep = innerW / (values.length - 1);
-
-    let points: Array<[number, number]>;
-    if (typeof startAtY === 'number') {
-      // Anchor the first value at startAtY and scale deltas so they fit without clamping
-      const baselineY = Math.min(height - bottomPad, Math.max(topPad, startAtY));
-      const baseN = normalized[0];
-      const deltas = normalized.map(n => n - baseN);
-      const maxAbsDelta = deltas.reduce((m, d) => Math.max(m, Math.abs(d)), 0) || 1;
-      const amplitudeLimitPx = Math.max(1, Math.min(baselineY - topPad, height - bottomPad - baselineY) - 1);
-      const scale = amplitudeLimitPx / maxAbsDelta;
-
-      points = deltas.map((d, i) => [
-        leftPad + i * xStep,
-        baselineY - d * scale
-      ]);
-    } else {
-      points = normalized.map((n, i) => [
-        leftPad + i * xStep,
-        height - bottomPad - n * innerH
-      ]);
-    }
-
-    // If endAtY provided, shift points linearly so the last point matches endAtY without clamping
-    if (typeof endAtY === 'number' && points.length > 1) {
-      const targetEndY = Math.min(height - bottomPad, Math.max(topPad, endAtY));
-      const currentEndY = points[points.length - 1][1];
-      const deltaTarget = targetEndY - currentEndY;
-      const lastIndex = points.length - 1;
-      let minDelta = -Infinity;
-      let maxDelta = Infinity;
-      for (let i = 1; i <= lastIndex; i++) {
-        const t = i / lastIndex; // 0..1
-        const y = points[i][1];
-        // Bounds: topPad <= y + delta*t <= height - bottomPad
-        const low = (topPad - y) / t;
-        const high = ((height - bottomPad) - y) / t;
-        if (low > minDelta) minDelta = low;
-        if (high < maxDelta) maxDelta = high;
-      }
-      const delta = Math.max(minDelta, Math.min(maxDelta, deltaTarget));
-      for (let i = 1; i <= lastIndex; i++) {
-        const t = i / lastIndex;
-        points[i][1] = points[i][1] + delta * t;
-      }
-    }
-
-    const pathLine = 'M ' + points.map(p => p.join(' ')).join(' L ');
-    const pathArea =
-      pathLine +
-      ` L ${points[points.length - 1][0]} ${height - bottomPad}` +
-      ` L ${leftPad} ${height - bottomPad} Z`;
-
-    const fillId = `grad-${id}`;
-
-    const hexToRgba = (hex: string, alpha: number) => {
-      const sanitized = hex.replace('#', '');
-      const bigint = parseInt(sanitized, 16);
-      const r = (bigint >> 16) & 255;
-      const g = (bigint >> 8) & 255;
-      const b = bigint & 255;
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    };
-
-    return (
-      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-        <defs>
-          <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={hexToRgba(color, 0.32)} />
-            <stop offset="100%" stopColor={hexToRgba(color, 0)} />
-          </linearGradient>
-        </defs>
-        <path d={pathArea} fill={`url(#${fillId})`} />
-        <path d={pathLine} fill="none" stroke={color} strokeWidth="2" strokeOpacity="0.5" />
-      </svg>
-    );
-  });
+  
 
   return (
     <div
@@ -283,10 +137,24 @@ const Card: React.FC<CardProps> = ({ data, onClick, className = '' }) => {
                 <span className="text-xs font-semibold text-white">{o.probability.toFixed(1)}%</span>
               </div>
               <div className="basis-2/5 flex gap-1 items-center justify-end">
-                <button className="p-2 text-[#31D482] text-xs rounded-[8px] border-1 border-[#31D482]/72 hover:bg-green-500/30 transition-colors ">
+                <button
+                  className="p-2 text-[#31D482] text-xs rounded-[8px] border-1 border-[#31D482]/72 hover:bg-green-500/30 transition-colors "
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const openRightSidebarWithOutcome = useUIStore.getState().openRightSidebarWithOutcome;
+                    openRightSidebarWithOutcome(data, o.label, 'buy');
+                  }}
+                >
                   Yes
                 </button>
-                <button className="p-2 text-[#F97066] text-xs rounded-[8px] border-1 border-[#F97066]/72 hover:bg-red-500/30 transition-colors">
+                <button
+                  className="p-2 text-[#F97066] text-xs rounded-[8px] border-1 border-[#F97066]/72 hover:bg-red-500/30 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const openRightSidebarWithOutcome = useUIStore.getState().openRightSidebarWithOutcome;
+                    openRightSidebarWithOutcome(data, o.label, 'sell');
+                  }}
+                >
                   No
                 </button>
               </div>
@@ -294,19 +162,7 @@ const Card: React.FC<CardProps> = ({ data, onClick, className = '' }) => {
           ))}
         </div>
       </div>
-      {randomizedSparkValues && randomizedSparkValues.length > 1 && (
-        <div className="absolute bottom-0 left-0 right-0 w-full pointer-events-none z-0">
-          <MiniAreaChart
-            values={randomizedSparkValues}
-            color={providerConfig.borderHex || providerConfig.bgHex}
-            id={`${data.id}-bg`}
-            width={320}
-            height={200}
-            startAtY={100}
-            endAtY={['kalshi','limitless','zeitgeist'].includes(data.provider) ? 150 : 60}
-          />
-        </div>
-      )}
+      
     </div>
   );
 };

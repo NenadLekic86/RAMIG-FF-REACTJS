@@ -1,6 +1,8 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useMemo, useRef, useState, useEffect } from 'react';
 import TabUnderline from '../../components/Tabs/TabUnderline';
+import DepositModal from '../../components/Modals/DepositModal';
+import WithdrawModal from '../../components/Modals/WithdrawModal';
 
 export default function Profile() {
   const location = useLocation();
@@ -15,6 +17,8 @@ export default function Profile() {
   }, [location.pathname]);
   const [activeKey, setActiveKey] = useState(activeKeyFromPath);
   useEffect(() => setActiveKey(activeKeyFromPath), [activeKeyFromPath]);
+  const [isDepositOpen, setIsDepositOpen] = useState(false);
+  const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -30,11 +34,11 @@ export default function Profile() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button className="h-11 px-4 rounded-lg border border-customBorder bg-[#171717] flex items-center gap-2">
+          <button onClick={() => setIsWithdrawOpen(true)} className="h-11 px-4 rounded-lg border border-customBorder bg-[#171717] flex items-center gap-2">
             <img src="/Upload.svg" alt="Withdraw" className="w-5 h-5" />
             <span className="font-button">Withdraw</span>
           </button>
-          <button className="h-11 px-4 rounded-lg btn-gradient-border bg-[#272728] flex items-center gap-2">
+          <button onClick={() => setIsDepositOpen(true)} className="h-11 px-4 rounded-lg btn-gradient-border bg-[#272728] flex items-center gap-2">
             <img src="/Download.svg" alt="Deposit" className="w-5 h-5" />
             <span className="font-button">Deposit</span>
           </button>
@@ -72,7 +76,12 @@ export default function Profile() {
         <TabUnderline containerRef={containerRef} activeKey={activeKey} bottom={-1} height={2} />
       </div>
 
-      <Outlet />
+      {/* Animated tab content wrapper: replays on route change */}
+      <div key={location.pathname} className="animate-rsb-in panel-transition">
+        <Outlet />
+      </div>
+      <DepositModal open={isDepositOpen} onClose={() => setIsDepositOpen(false)} />
+      <WithdrawModal open={isWithdrawOpen} onClose={() => setIsWithdrawOpen(false)} />
     </div>
   );
 }

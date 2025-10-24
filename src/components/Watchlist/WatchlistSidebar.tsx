@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useUIStore } from '../../store/ui';
 import { PROVIDER_CONFIGS, hexToRgbStr } from '../../config/providers';
 import type { CardData } from '../../models/card';
@@ -41,24 +42,22 @@ type PositionItem = BaseItem & {
   Polymarket: 'polymarket',
   Zeitgeist: 'zeitgeist',
 };
-const providerKeyToLabel: Record<string, string> = {
-  kalshi: 'Kalshi',
-  manifold: 'Manifold',
-  limitless: 'Limitless',
-  predictit: 'PredictIt',
-  polymarket: 'Polymarket',
-  zeitgeist: 'Zeitgeist',
-};
 
 export default function WatchlistSidebar() {
   const closeWatchlist = useUIStore(s => s.closeWatchlist);
   const isWatchlistClosing = useUIStore(s => s.isWatchlistClosing);
+  const watchlistWidth = useUIStore(s => s.watchlistWidth);
+  const setWatchlistWidth = useUIStore(s => s.setWatchlistWidth);
   const openTerminal = useUIStore(s => s.openTerminal);
   const closeTerminal = useUIStore(s => s.closeTerminal);
   const isTerminalOpen = useUIStore(s => s.isTerminalOpen);
   const selectedCard = useUIStore(s => s.selectedCard);
+  const openRightSidebar = useUIStore(s => s.openRightSidebar);
+  const closeRightSidebar = useUIStore(s => s.closeRightSidebar);
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<TabKey>('trending');
   const watchlistMap = useWatchlistStore(s => s.itemsById);
+  const removeFromWatchlist = useWatchlistStore(s => s.remove);
   const [searchQuery, setSearchQuery] = useState('');
   // Positions sub-tabs
   const [positionsSubTab, setPositionsSubTab] = useState<'active' | 'history'>('active');
@@ -80,24 +79,7 @@ export default function WatchlistSidebar() {
   const removeChip = (label: string) => setChips(prev => prev.filter(c => c !== label));
   const allProviders: string[] = ['Manifold', 'Kalshi', 'Zeitgeist', 'Polymarket', 'Limitless', 'PredictIt'];
   // Track cards removed by the user
-  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
-  const removeCard = (id: string) => {
-    setRemovedIds(prev => {
-      const next = new Set(prev);
-      next.add(id);
-      // If this was the last card for its provider, unselect the chip
-      const target = items.find(it => it.id === id);
-      if (target) {
-        const providerKey = target.provider;
-        const hasAnyLeft = items.some(it => it.provider === providerKey && !next.has(it.id));
-        if (!hasAnyLeft) {
-          const label = providerKeyToLabel[providerKey] ?? providerKey;
-          setChips(prevChips => prevChips.filter(c => c !== label));
-        }
-      }
-      return next;
-    });
-  };
+  const [removedIds] = useState<Set<string>>(new Set());
 
   // Trending/positions items derived from centralized demoCards
   const items: BaseItem[] = useMemo(() => (
@@ -306,8 +288,42 @@ export default function WatchlistSidebar() {
     return n > 0 ? 'text-[#039855]' : 'text-[#D92D20]';
   };
 
+  const onDragStartX = useRef<number | null>(null);
+  const onStartWidth = useRef<number>(0);
+  const startResize = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDragStartX.current = e.clientX;
+    onStartWidth.current = watchlistWidth;
+    // Prevent text selection and show col-resize cursor during drag
+    const prevUserSelect = document.body.style.userSelect;
+    const prevCursor = document.body.style.cursor;
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    const onSelectStart = (ev: Event) => ev.preventDefault();
+    document.addEventListener('selectstart', onSelectStart);
+
+    const onMove = (ev: MouseEvent) => {
+      ev.preventDefault();
+      if (onDragStartX.current == null) return;
+      const dx = ev.clientX - onDragStartX.current;
+      setWatchlistWidth(onStartWidth.current + dx);
+    };
+    const onUp = () => {
+      onDragStartX.current = null;
+      // Restore default selection/cursor behavior
+      document.body.style.userSelect = prevUserSelect;
+      document.body.style.cursor = prevCursor;
+      document.removeEventListener('selectstart', onSelectStart);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
   return (
-    <aside className={`hidden lg:flex flex-col fixed left-[80px] top-8 z-50 h-dvh w-[320px] border-r border-customGray44 ${isWatchlistClosing ? 'animate-lsb-out' : 'animate-lsb-in'}`}>
+    <aside className={`hidden lg:flex flex-col fixed left-[80px] top-8 z-50 h-dvh ${isWatchlistClosing ? 'animate-lsb-out' : 'animate-lsb-in'} panel-transition`} style={{ width: watchlistWidth }}>
       {/* Header */}
       <div className="px-4 py-8 flex items-center justify-between">
         <h2 className="text-base font-semibold">My Watchlist</h2>
@@ -458,6 +474,21 @@ export default function WatchlistSidebar() {
         )}
         {(activeTab === 'positions' ? filteredPositions : filteredItems).map((x) => {
           const isActive = selectedCard?.id === x.id;
+          const card: CardData = {
+            id: x.id,
+            title: x.title,
+            description: x.description,
+            provider: x.provider as CardData['provider'],
+            liquidity: x.liquidity,
+            createdDate: x.created,
+            category: x.category,
+            imageUrl: '/placeholder_img.png',
+            yesPercentage: parseFloat((x.yes || '0').replace(/%/g, '')) || 80,
+            noPercentage: parseFloat((x.no || '0').replace(/%/g, '')) || 20,
+            outcomes: (x as { outcomes?: Array<{ label: string; probability: number; volume?: string }> }).outcomes,
+            hasHoverEffect: false,
+            isActive: true,
+          };
           return (
           <div
             key={x.id}
@@ -467,49 +498,55 @@ export default function WatchlistSidebar() {
               ...(isActive ? { background: 'rgba(255,255,255,0.08)' } : {}),
             }}
             onClick={() => {
+              if (activeTab === 'positions' || activeTab === 'watchlist') {
+                if (location.pathname.startsWith('/explore')) {
+                  openRightSidebar(card);
+                }
+                return;
+              }
               if (isTerminalOpen && selectedCard?.id === x.id) {
                 closeTerminal();
                 return;
               }
-              const card: CardData = {
-                id: x.id,
-                title: x.title,
-                description: x.description,
-                provider: x.provider as CardData['provider'],
-                liquidity: x.liquidity,
-                createdDate: x.created,
-                category: x.category,
-                imageUrl: '/placeholder_img.png',
-                yesPercentage: parseFloat((x.yes || '0').replace(/%/g, '')) || 80,
-                noPercentage: parseFloat((x.no || '0').replace(/%/g, '')) || 20,
-                outcomes: (x as { outcomes?: Array<{ label: string; probability: number; volume?: string }> }).outcomes,
-                hasHoverEffect: false,
-                isActive: true,
-              };
               openTerminal(card);
             }}
           >
-            {activeTab === 'watchlist' ? (
-              <div className="absolute top-2 right-2 p-1 rounded">
-                <img src="/Bookmark--filled.svg" alt="Bookmarked" className="w-4 h-4 opacity-64" />
-              </div>
-            ) : activeTab === 'positions' ? null : (
-              <button
-                className="absolute top-2 right-2 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10"
-                aria-label="Remove card"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeCard(x.id);
-                }}
-              >
-                <img src="/Trash-can.svg" alt="Delete" className="w-4 h-4" />
-              </button>
-            )}
+            {/* No delete button in Trending per requirements */}
             <div className="flex items-center gap-2">
               {activeTab === 'positions' ? renderSideBadge((x as PositionItem).side) : renderProviderBadge(x.provider)}
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="text-[16px] font-semibold truncate">{x.title}</div>
               </div>
+              {activeTab === 'positions' && (
+                <button
+                  className="p-1 rounded hover:bg-white/10 shrink-0"
+                  aria-label="Open Terminal"
+                  onClick={(e) => { e.stopPropagation(); closeRightSidebar(); openTerminal(card); }}
+                  type="button"
+                >
+                  <img src="/Chart--candlestick.svg" alt="Open Terminal" className="w-5 h-5 opacity-70" />
+                </button>
+              )}
+              {activeTab === 'watchlist' && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    className="p-1 rounded hover:bg-white/10"
+                    aria-label="Open Terminal"
+                    onClick={(e) => { e.stopPropagation(); closeRightSidebar(); openTerminal(card); }}
+                    type="button"
+                  >
+                    <img src="/Chart--candlestick.svg" alt="Open Terminal" className="w-5 h-5 opacity-70" />
+                  </button>
+                  <button
+                    className="p-1 rounded hover:bg-white/10"
+                    aria-label="Remove from Watchlist"
+                    onClick={(e) => { e.stopPropagation(); removeFromWatchlist(x.id); }}
+                    type="button"
+                  >
+                    <img src="/Trash-can.svg" alt="Remove" className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
             {activeTab !== 'positions' ? (
               <div className="mt-3 flex flex-wrap gap-2 text-[12px]">
@@ -537,6 +574,17 @@ export default function WatchlistSidebar() {
                   <span className="text-white/44">No:</span>
                   <span className="ml-1 text-white">{x.no}</span>
                 </span>
+                {activeTab === 'watchlist' && isTerminalOpen && selectedCard?.id === x.id && (
+                  <div className="w-full mt-3 border-t border-customGray44">
+                    <button
+                      className="w-full h-9 text-white text-sm"
+                      onClick={(e) => { e.stopPropagation(); closeTerminal(); }}
+                      type="button"
+                    >
+                      Close Position
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="mt-3 text-[12px] tracking-[-2%]">
@@ -566,7 +614,13 @@ export default function WatchlistSidebar() {
                 </div>
                 {(x as PositionItem).status === 'active' && (
                   <div className="mt-3 border-t border-customGray44">
-                    <button className="w-full h-9 text-white text-sm">Close Position</button>
+                    <button
+                      className="w-full h-9 text-white text-sm"
+                      onClick={(e) => { e.stopPropagation(); closeTerminal(); }}
+                      type="button"
+                    >
+                      Close Position
+                    </button>
                   </div>
                 )}
               </div>
@@ -575,6 +629,14 @@ export default function WatchlistSidebar() {
           );
         })}
       </div>
+      {/* Draggable resizer */}
+      <div
+        className="absolute top-0 right-0 h-full w-1 cursor-col-resize bg-transparent hover:bg-white/10"
+        onMouseDown={startResize}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize watchlist"
+      />
     </aside>
   );
 }

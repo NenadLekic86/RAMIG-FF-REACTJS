@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '../../../Table/DataTable';
 import TabUnderline from '../../../components/Tabs/TabUnderline';
+import { demoCards } from '../../../models/card';
 
 type PositionRow = {
   name: string;
@@ -13,15 +14,17 @@ type PositionRow = {
   status: 'sell' | 'sold';
 };
 
-const sampleRows: PositionRow[] = Array.from({ length: 10 }).map((_, i) => ({
-  name: 'Human Mars 2030',
-  invested: '1,580¢',
-  remaining: '580¢',
-  sold: '1,000¢',
-  pnlPercent: i % 2 === 0 ? -15.83 : 155.83,
-  pnlCents: i % 2 === 0 ? -950 : 950,
-  status: i % 3 === 0 ? 'sold' : 'sell',
-}));
+const sampleRows: PositionRow[] = demoCards
+  .filter(c => !!c.position)
+  .map((c, i) => ({
+    name: c.title,
+    invested: c.position?.size ?? '0¢',
+    remaining: c.position?.remaining ?? '0¢',
+    sold: c.position?.sold ?? '0¢',
+    pnlPercent: parseFloat((c.position?.pnl ?? '0').replace(/[^0-9.-]/g, '')) * (c.position?.pnl?.trim().startsWith('-') ? 1 : 1),
+    pnlCents: i % 2 === 0 ? -950 : 950,
+    status: c.position?.status === 'history' ? 'sold' : 'sell',
+  }));
 
 export default function MyProfile() {
   const columns = useMemo<ColumnDef<PositionRow>[]>(() => [

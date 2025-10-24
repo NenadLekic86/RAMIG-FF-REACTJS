@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import TabUnderline from '../Tabs/TabUnderline.tsx';
 import OrderBook from './OrderBook';
 import { useUIStore, useToast } from '../../store/ui';
 import type { Outcome } from '../../models/card';
 import { PROVIDER_CONFIGS } from '../../config/providers';
+import Chart, { type ChartHandle } from '../Chart/Chart';
+import CandlestickChart, { type CandlestickChartHandle } from '../Chart/CandlestickChart';
+import { getCardChartData, convertLineToCandlestickData, type TimePeriod, getVisibleTimeRange } from '../../utils/chartData';
 
 export default function TerminalOverlay() {
   const {
@@ -11,8 +15,13 @@ export default function TerminalOverlay() {
     isTerminalClosing,
     isWatchlistOpen,
     selectedCard,
+    closeWatchlist,
+    closeTerminal,
+    closeRightSidebar,
   } = useUIStore();
+  const watchlistWidth = useUIStore(s => s.watchlistWidth);
   const { pushToast } = useToast();
+  const navigate = useNavigate();
 
   const providerIconMap: Record<string, string> = Object.fromEntries(
     Object.entries(PROVIDER_CONFIGS).map(([k, v]) => [k, v.icon])
@@ -30,6 +39,16 @@ export default function TerminalOverlay() {
   const buyRef = useRef<HTMLButtonElement>(null);
   const sellRef = useRef<HTMLButtonElement>(null);
   const [chartType, setChartType] = useState<'line' | 'candlestick'>('line');
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('All');
+  // Order type dropdown state
+  const [isOrderTypeOpen, setIsOrderTypeOpen] = useState(false);
+  const [orderType, setOrderType] = useState<'limit' | 'market'>('limit');
+  const orderTypeBtnRef = useRef<HTMLButtonElement>(null);
+  const orderTypeMenuRef = useRef<HTMLDivElement>(null);
+  
+  // Chart refs for zoom control
+  const lineChartRef = useRef<ChartHandle>(null);
+  const candlestickChartRef = useRef<CandlestickChartHandle>(null);
 
   useEffect(() => {
     if (view === 'detail') {
@@ -51,6 +70,27 @@ export default function TerminalOverlay() {
     }
   }, [slippage, view]);
 
+  // Close order type dropdown on outside click / ESC
+  useEffect(() => {
+    if (!isOrderTypeOpen) return;
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!orderTypeMenuRef.current || !orderTypeBtnRef.current) return;
+      if (!orderTypeMenuRef.current.contains(target) && !orderTypeBtnRef.current.contains(target)) {
+        setIsOrderTypeOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOrderTypeOpen(false);
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [isOrderTypeOpen]);
+
   const sanitizeCurrencyInput = (value: string): string => {
     let v = value.replace(/[^0-9.]/g, '');
     const firstDot = v.indexOf('.');
@@ -69,10 +109,63 @@ export default function TerminalOverlay() {
   };
 
   // Compute layout class before any early returns to satisfy hooks rule
-  const leftOffsetClass = useMemo(
-    () => (isWatchlistOpen ? 'lg:left-[400px]' : 'lg:left-[80px]'),
-    [isWatchlistOpen]
+  const leftOffsetStyle = useMemo(() => ({ left: isWatchlistOpen ? Math.max(80, 80 + (watchlistWidth)) : 80 }), [isWatchlistOpen, watchlistWidth]);
+
+  // Generate chart data based on card outcomes (must be before early return)
+  // Always generate full 30 days of data; time periods act as zoom presets
+  const chartData = useMemo(
+    () => selectedCard ? getCardChartData(selectedCard.outcomes, selectedCard.yesPercentage, selectedCard.noPercentage) : [],
+    [selectedCard]
   );
+
+  // Convert line data to candlestick format (1-hour candles for better granularity)
+  const candlestickData = useMemo(
+    () => convertLineToCandlestickData(chartData, 1),
+    [chartData]
+  );
+
+  // Zoom handlers
+  const handleZoomIn = () => {
+    if (chartType === 'line') {
+      lineChartRef.current?.zoomIn();
+    } else {
+      candlestickChartRef.current?.zoomIn();
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (chartType === 'line') {
+      lineChartRef.current?.zoomOut();
+    } else {
+      candlestickChartRef.current?.zoomOut();
+    }
+  };
+
+  const handleZoomReset = () => {
+    if (chartType === 'line') {
+      lineChartRef.current?.zoomReset();
+    } else {
+      candlestickChartRef.current?.zoomReset();
+    }
+  };
+
+  // Time period handler - acts as zoom preset
+  const handleTimePeriodChange = (period: TimePeriod) => {
+    setTimePeriod(period);
+    
+    // Get the latest time from chart data
+    if (chartData.length === 0 || chartData[0].data.length === 0) return;
+    
+    const latestTime = chartData[0].data[chartData[0].data.length - 1].time;
+    const { from, to } = getVisibleTimeRange(period, latestTime * 1000); // Convert to ms
+    
+    // Apply zoom to active chart
+    if (chartType === 'line') {
+      lineChartRef.current?.setVisibleTimeRange(from, to);
+    } else {
+      candlestickChartRef.current?.setVisibleTimeRange(from, to);
+    }
+  };
 
   if (!isTerminalOpen || !selectedCard) return null;
 
@@ -87,9 +180,9 @@ export default function TerminalOverlay() {
   const isOverBalance = !Number.isNaN(amountValue) && amountValue > balanceUsd;
 
   return (
-    <div className={`fixed ${leftOffsetClass} right-0 top-[57px] z-30 h-[calc(100dvh-57px)] border-l border-customGray44 bg-customBg shadow-xl ${isTerminalClosing ? 'animate-rsb-out' : 'animate-rsb-in'} flex flex-col`}>
+    <div className={`fixed right-0 top-[37px] z-30 h-[calc(100dvh-57px)] border-l border-customGray44 bg-customBg shadow-xl ${isTerminalClosing ? 'animate-rsb-out' : 'animate-rsb-in'} panel-transition flex flex-col`} style={leftOffsetStyle}>
       {/* Header */}
-      <div className="p-6 border-b border-customGray44">
+      <div className="px-6 py-8 border-b border-customGray44">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative w-14 h-14 rounded-[8px] shrink-0" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -147,7 +240,7 @@ export default function TerminalOverlay() {
               <img src="/3rd-party-connected.svg" alt="Related Markets" className="w-5 h-5" />
               Related Markets
             </button>
-            <button className="p-3 text-[14px] flex items-center gap-2 bg-customGray17 rounded-[8px]" aria-label="Portfolio">
+            <button className="p-3 text-[14px] flex items-center gap-2 bg-customGray17 rounded-[8px]" aria-label="Portfolio" onClick={() => { closeWatchlist(); closeRightSidebar(); closeTerminal(); navigate('/profile'); }} type="button">
             <img src="/User--avatar.svg" alt="Portfolio" className="w-5 h-5" />
             Portfolio
             </button>
@@ -174,8 +267,14 @@ export default function TerminalOverlay() {
 
             {view === 'list' && (
               <div className="px-6 py-2 flex items-center gap-2 text-[11px] text-white/44">
-                {['15m','1h','6h','1d','All'].map((t) => (
-                  <button key={t} className={`px-2 py-1 rounded ${t==='15m' ? 'text-white' : 'hover:bg-white/5'}`}>{t}</button>
+                {(['15m','1h','6h','1d','All'] as TimePeriod[]).map((t) => (
+                  <button 
+                    key={t} 
+                    onClick={() => handleTimePeriodChange(t)}
+                    className={`px-2 py-1 rounded transition-colors ${timePeriod === t ? 'text-white bg-white/10' : 'hover:bg-white/5'}`}
+                  >
+                    {t}
+                  </button>
                 ))}
                 <div className="ml-auto flex items-center gap-3">
                     <button type="button" onClick={() => setChartType('line')} aria-label="Line chart" aria-pressed={chartType==='line'}>
@@ -185,17 +284,27 @@ export default function TerminalOverlay() {
                       <img src="/Chart--candlestick.svg" alt="Chart candlestick" className={`w-5 h-5 ${chartType==='candlestick' ? 'opacity-100' : 'opacity-44 hover:opacity-80'}`} />
                     </button>
                     <span> | </span>
-                  <img src="/Zoom--out.svg" alt="zoom" className="w-5 h-5 opacity-70" />
-                  <img src="/Zoom--in.svg" alt="search" className="w-5 h-5 opacity-70" />
-                  <img src="/Zoom--reset.svg" alt="search" className="w-5 h-5 opacity-70" />
+                  <button type="button" onClick={handleZoomOut} aria-label="Zoom out" className="hover:opacity-100 transition-opacity">
+                    <img src="/Zoom--out.svg" alt="Zoom out" className="w-5 h-5 opacity-70" />
+                  </button>
+                  <button type="button" onClick={handleZoomIn} aria-label="Zoom in" className="hover:opacity-100 transition-opacity">
+                    <img src="/Zoom--in.svg" alt="Zoom in" className="w-5 h-5 opacity-70" />
+                  </button>
+                  <button type="button" onClick={handleZoomReset} aria-label="Reset zoom" className="hover:opacity-100 transition-opacity">
+                    <img src="/Zoom--reset.svg" alt="Reset zoom" className="w-5 h-5 opacity-70" />
+                  </button>
                 </div>
               </div>
             )}
 
             {view === 'list' && (
               <div className="px-6 py-4">
-                <div className="h-auto flex items-center justify-center text-xs text-white/40">
-                  <img src={chartType==='line' ? '/LineChart-rightsidebar.png' : '/LineChart.svg'} alt="chart" className="w-full h-full" />
+                <div className="h-auto">
+                  {chartType === 'line' ? (
+                    <Chart ref={lineChartRef} series={chartData} height={320} />
+                  ) : (
+                    <CandlestickChart ref={candlestickChartRef} series={candlestickData} height={320} />
+                  )}
                 </div>
               </div>
             )}
@@ -218,8 +327,8 @@ export default function TerminalOverlay() {
                     volumeText={`${o.volume ?? '$20,660,050'} Vol.`}
                     isActive={activeOutcome === o.label}
                     onSelect={() => { setActiveOutcome(o.label); setDetail({ label: o.label, side: tradeTab }); }}
-                    onYes={() => { setDetail({ label: o.label, side: 'yes' }); }}
-                    onNo={() => { setDetail({ label: o.label, side: 'no' }); }}
+                    onYes={() => { setTradeTab('buy'); setDetail({ label: o.label, side: 'buy' }); }}
+                    onNo={() => { setTradeTab('sell'); setDetail({ label: o.label, side: 'sell' }); }}
                   />
                 ))}
                 {/* Market Description as last expandable item */}
@@ -265,9 +374,47 @@ export default function TerminalOverlay() {
                         Sell
                       </button>
                     </div>
-                    <div className="flex items-center gap-1 text-white/80">
-                      <span>Limit</span>
-                      <img src="/Chevron--sort.svg" alt="Sort" className="w-5 h-5 opacity-80" />
+                    <div className="relative">
+                      <button
+                        ref={orderTypeBtnRef}
+                        className="flex items-center gap-1 text-white/80 px-2 py-1 rounded hover:bg-white/5"
+                        onClick={() => setIsOrderTypeOpen(o => !o)}
+                        aria-haspopup="menu"
+                        aria-expanded={isOrderTypeOpen}
+                        type="button"
+                      >
+                        <span className="capitalize">{orderType === 'limit' ? 'Limit' : 'Market'}</span>
+                        <img src="/Chevron--sort.svg" alt="Order type" className="w-5 h-5 opacity-80" />
+                      </button>
+                      {isOrderTypeOpen && (
+                        <div
+                          ref={orderTypeMenuRef}
+                          role="menu"
+                          className="absolute right-0 top-[calc(100%+4px)] z-50 w-[232px] rounded-[16px] border border-customGray44 bg-[#292929] shadow-xl"
+                        >
+                          <div className="px-5 pt-5 pb-2 text-white/44 text-[12px]">Order type</div>
+                          <button
+                            className={`my-1 flex items-center justify-between rounded-[12px] mx-1 p-3 text-[14px] w-[93%] ${orderType==='limit' ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                            onClick={() => { setOrderType('limit'); setIsOrderTypeOpen(false); }}
+                            role="menuitemradio"
+                            aria-checked={orderType==='limit'}
+                            type="button"
+                          >
+                            <span>Limit</span>
+                            {orderType==='limit' && <img src="/Checkmark.svg" alt="Selected" className="w-5 h-5 opacity-80" />}
+                          </button>
+                          <button
+                            className={`my-1 flex items-center justify-between rounded-[12px] mx-1 p-3 text-[14px] w-[93%] ${orderType==='market' ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                            onClick={() => { setOrderType('market'); setIsOrderTypeOpen(false); }}
+                            role="menuitemradio"
+                            aria-checked={orderType==='market'}
+                            type="button"
+                          >
+                            <span>Market</span>
+                            {orderType==='market' && <img src="/Checkmark.svg" alt="Selected" className="w-5 h-5 opacity-80" />}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <TabUnderline
@@ -330,7 +477,7 @@ export default function TerminalOverlay() {
                 {/* Price */}
                 <div className="border-b border-customGray44 py-4">
                   <div className="text-white/90">Price</div>
-                  <div className="text-xs text-white/44">Input price to change to limit order</div>
+                  <div className="text-xs text-white/44">{orderType === 'market' ? 'Input price to change to limit order' : 'Specify desired execution price'}</div>
                   <div className="flex items-center gap-2 pt-2 w-full">
                     <span className="text-white/50 text-[18px]">$</span>
                     <input className="bg-transparent outline-none w-full text-[28px]" inputMode="decimal" value={price} onChange={(e) => setPrice(sanitizeCurrencyInput(e.target.value))} />

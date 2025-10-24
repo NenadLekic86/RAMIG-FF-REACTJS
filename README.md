@@ -1,206 +1,783 @@
-## Ramig FF ReactJS
+# Ramig FF - Prediction Markets Trading Platform
 
-Modern React 19 + TypeScript + Vite 7 application for exploring and trading prediction markets with a unified UI. It ships with a polished dark UI, fast client state via Zustand, data fetching with TanStack Query, and a modular architecture designed for plugging in real provider APIs.
+A modern, full-featured React 19 + TypeScript + Vite 7 application for exploring and trading prediction markets with real-time interactive charts, unified UI, and seamless multi-provider integration.
 
-### What you get
-- Clean, modern layout with left navigation, top activity bar, watchlist sidebar, and a trading ticket/right sidebar
-- Explore page with provider filters, full‑text search, and animated cards
-- Terminal overlay with trade ticket, slippage controls, and toast feedback
-- Profile area with markets, accounts, and points tabs
-- Headless data layer ready for real APIs (mocked locally by default)
+## ✨ Features
 
+### 🎨 **Modern UI/UX**
+- Sleek dark theme optimized for trading
+- Responsive layout with smooth animations
+- Left navigation, top activity bar, and dynamic sidebars
+- Toast notifications for real-time feedback
+- Flash effects and state persistence
 
-## Quick Start
+### 📊 **Interactive Charts**
+- **Real-time line charts** with multiple outcome tracking
+- **Candlestick charts** with OHLC data visualization
+- **Zoom controls** (in, out, reset) with smooth transitions
+- **Time period presets** (15m, 1h, 6h, 1d, All) as quick zoom levels
+- **15-minute granularity** - drill down to fine-grained market movements
+- **Chart type toggle** - seamlessly switch between line and candlestick views
+- Powered by `lightweight-charts` library by TradingView
 
-### Requirements
-- Node.js 18+ (LTS) or 20+
-- npm 9+ (bundled with Node)
+### 💹 **Trading Features**
+- **Full trading terminal** with buy/sell tickets
+- **Slippage controls** with visual slider
+- **Limit and market orders**
+- **Amount validation** and balance checking
+- **Multi-outcome markets** support
+- **Real-time price updates** ready for WebSocket integration
 
-### 1) Install dependencies
+### 🔍 **Market Explorer**
+- Advanced filtering by providers (Polymarket, Kalshi, Metaculus, etc.)
+- Full-text search across markets
+- Animated card grid with hover effects
+- Provider icons and color-coded badges
+- Quick access to market details
+
+### 📁 **User Profile**
+- Markets dashboard
+- Account management with deposit/withdraw
+- Points tracking system
+- Multi-account support across providers
+
+### 🎯 **Watchlist & Bookmarks**
+- Persistent watchlist with Zustand state management
+- Quick add/remove from any view
+- Resizable sidebar
+- Flash animations on card updates
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Node.js** 18+ (LTS) or 20+
+- **npm** 9+ (bundled with Node)
+
+### 1. Install Dependencies
+
 ```bash
 npm install
 ```
 
-### 2) Configure environment
-Create `.env.local` (root). If you skip `VITE_API_URL`, the app will run with mocked/demo data only and any API calls will intentionally throw to avoid accidental network usage.
+### 2. Configure Environment
+
+Create a `.env.local` file in the project root:
 
 ```bash
 # .env.local
+
+# API Configuration (optional - runs with demo data if not set)
 VITE_API_URL=http://localhost:3000
 VITE_WS_URL=ws://localhost:3000/ws
 
-# Optional: serve under a sub-path (affects router assets and links)
-# Examples: "/" (default), "/app/", "/ramig/" — must end with a trailing slash
+# Base Path (for deploying under sub-path)
 VITE_BASE_PATH=/
 ```
 
-Key notes:
-- `VITE_API_URL` is consumed by the `ApiClient` in `src/services/api.ts`. When empty, any API call throws: "API not configured…".
-- `VITE_WS_URL` is used by `makeWS` in `src/services/ws.ts` for reconnecting sockets.
-- `VITE_BASE_PATH` is read by `vite.config.ts` and must end with `/`.
+**Key Notes:**
+- `VITE_API_URL` - Backend API endpoint (app uses demo data if not configured)
+- `VITE_WS_URL` - WebSocket endpoint for real-time updates
+- `VITE_BASE_PATH` - Must end with `/` (e.g., `/app/`, `/ramig/`)
 
-### 3) Start the app (development)
+### 3. Start Development Server
+
 ```bash
 npm run dev
 ```
-Open the URL from the console (usually `http://localhost:5173`).
 
-### 4) Build & preview
+Open the URL shown in console (usually `http://localhost:5174/`)
+
+### 4. Build for Production
+
 ```bash
 npm run build
 npm run preview
 ```
-Build output lives in `dist/`.
 
+Build output is generated in the `dist/` directory.
 
-## Scripts
-- `npm run dev`: Start Vite dev server
-- `npm run build`: Type‑check (`tsc -b`) then build with Vite
-- `npm run preview`: Preview the production build locally
-- `npm run lint`: Run ESLint over the project
+---
 
+## 📜 Available Scripts
 
-## Architecture Overview
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Vite development server |
+| `npm run build` | Type-check and build for production |
+| `npm run preview` | Preview production build locally |
+| `npm run lint` | Run ESLint on entire project |
 
-### Foundations
-- React 19 + TypeScript
-- Router: `react-router-dom` (root: `src/App.tsx`)
-- Build: Vite 7 with React SWC plugin (`vite.config.ts`)
-- Styling: Tailwind CSS v4 tokens + custom CSS variables (`src/index.css`)
-- State: Zustand stores (`src/store/*`)
-- Data fetching: TanStack Query (provider instantiated in `src/App.tsx`)
-- Tables/Virtualization: TanStack Table/Virtual (available for future lists)
-- Charts: `lightweight-charts` (infra is ready; sample imagery included)
+---
 
-### Client services
-- `src/services/api.ts` — Minimal `ApiClient` wrapper around `fetch` with JSON handling and explicit "not configured" guard.
-- `src/services/markets.ts` — `listMarkets`, `getMarket` (use `ApiClient` when configured; otherwise return empty results).
-- `src/services/accounts.ts` — `listAccounts` (same pattern as markets).
-- `src/services/ws.ts` — `makeWS(url)` using `reconnecting-websocket`.
+## 📊 Chart System (Interactive Data Visualization)
 
-### State stores (Zustand)
-- `src/store/ui.ts` — UI state for right sidebar, watchlist sidebar, and full‑screen terminal overlay. Also includes a lightweight toast system with auto‑dismiss.
-- `src/store/watchlist.ts` — Bookmark/watchlist store using a `Map<string, CardData>`.
-- `src/store/filters.ts` — Provider filter set; Explore page uses it to filter displayed markets.
+### Overview
 
-### UI layout
-- `src/components/Layout/Layout.tsx` — Shell with fixed left nav, fixed top bar, scrollable outlet, watchlist sidebar, right trading sidebar, and terminal overlay.
-- `src/components/Layout/LeftNav.tsx` — App navigation (Explore, Bookmarks, Profile shortcut).
-- `src/components/Layout/TopNav.tsx` — Activity bar (“My Positions” / “My Balances”) with auth/registration modals.
-- `src/components/Layout/RightSidebar.tsx` — Trading ticket with list/detail views, sanitized currency inputs, slippage control, and toast feedback.
-- `src/components/Terminal/TerminalOverlay.tsx` — Full‑screen trade terminal over the main layout with outcomes list and ticket.
+The application features a comprehensive interactive charting system that replaces static images with real-time, zoomable charts powered by **lightweight-charts v5** (TradingView).
 
-### Feature routes
-- `src/routes/explore/Explore.tsx` — Explore markets using demo data from `src/models/card.ts` with search and filters.
-- `src/routes/terminal/Terminal.tsx` — Page placeholder (the app primarily uses the terminal overlay).
-- `src/routes/profile/*` — Profile hub with subroutes: My Profile, Markets, Accounts, Points.
+### Chart Components
 
-### Data model & demo content
-- `src/models/card.ts` — Canonical `CardData` and `Outcome` types plus `demoCards` fixtures. This powers the Explore page locally.
-- `src/config/providers.ts` — Visual configuration per provider (icon, colors) consumed across components.
+#### 1. **Line Chart** (`Chart.tsx`)
+The primary chart component for displaying multi-outcome prediction markets.
 
+**Features:**
+- Multiple colored series for different outcomes
+- Interactive crosshair for data inspection
+- Smooth zoom in/out with programmable controls
+- Responsive resizing
+- 15-minute data granularity (2,880 data points over 30 days)
+- Time-based zoom presets
 
-## Directory Layout (high‑value paths)
-- `src/main.tsx` — App entry, global styles
-- `src/App.tsx` — Router + TanStack Query provider
-- `src/components/*` — Layout, cards, tabs, modals, terminal, watchlist UI
-- `src/routes/*` — Page‑level routes (Explore, Terminal, Profile and nested)
-- `src/services/*` — API client, markets/accounts services, WebSocket helper
-- `src/store/*` — Zustand stores (UI, filters, watchlist, toasts)
-- `src/models/*` — Shared types and demo data
-- `src/utils/*` — Search helpers and misc utilities
-- `public/*` — Static assets (icons, fonts, images)
+**Usage:**
+```tsx
+import Chart, { type ChartHandle } from './components/Chart/Chart';
+import { getCardChartData } from './utils/chartData';
 
+function MyComponent({ card }) {
+  const chartRef = useRef<ChartHandle>(null);
+  const chartData = useMemo(
+    () => getCardChartData(card.outcomes, card.yesPercentage, card.noPercentage),
+    [card]
+  );
+  
+  return (
+    <>
+      <Chart ref={chartRef} series={chartData} height={300} />
+      <button onClick={() => chartRef.current?.zoomIn()}>Zoom In</button>
+    </>
+  );
+}
+```
 
-## How It Works (end‑to‑end)
+#### 2. **Candlestick Chart** (`CandlestickChart.tsx`)
+Professional OHLC (Open, High, Low, Close) chart for trading-style visualization.
 
-1) You land on Explore (`/`). The page reads selected providers from `useProviderFilters`. Demo cards (`demoCards`) are filtered by provider and by full‑text search using `filterByQuery`.
+**Features:**
+- 1-hour candles aggregated from 15-minute data
+- Green/red candles for up/down movements
+- Automatic conversion from line data
+- Same zoom and time period controls as line charts
 
-2) Clicking a card calls `useUIStore().openRightSidebar(card)`, which mounts the trading `RightSidebar`. The sidebar animates in/out and persists a few in‑view settings (e.g., slippage in sessionStorage while open).
+**Usage:**
+```tsx
+import CandlestickChart, { type CandlestickChartHandle } from './components/Chart/CandlestickChart';
+import { getCardChartData, convertLineToCandlestickData } from './utils/chartData';
 
-3) The “Open Terminal” pattern uses `useUIStore().openTerminal(card)` to show the `TerminalOverlay` above the layout. The overlay presents outcomes, a chart area (imagery by default), and a buy/sell ticket with slippage and amount/price inputs. Submit actions fire toasts using the built‑in toast store.
+const lineData = getCardChartData(card.outcomes, card.yesPercentage, card.noPercentage);
+const candlestickData = convertLineToCandlestickData(lineData, 1); // 1-hour candles
 
-4) Profile (`/profile`) groups user‑centric actions. The Accounts tab demonstrates deposit/withdraw modals with clipboard copy and simple estimates; you can wire these to real endpoints later.
+return <CandlestickChart ref={chartRef} series={candlestickData} height={300} />;
+```
 
-5) Data flow: When `VITE_API_URL` is configured, services in `src/services/*` use `ApiClient` to call your backend. If it is not configured, the helpers return empty results (or throw if you call `api.request` directly) to make it obvious that you’re still in mock mode.
+#### 3. **Mini Chart** (`MiniChart.tsx`)
+Compact sparkline for card previews and small spaces.
 
+**Features:**
+- Minimal design without axes
+- Single-line visualization
+- Perfect for thumbnails
+- Ultra-lightweight
 
-## Wiring a Real Backend
+**Usage:**
+```tsx
+import MiniChart from './components/Chart/MiniChart';
+import { generateSparklineData } from './utils/chartData';
 
-1) Enable API calls: set `VITE_API_URL` in `.env.local` and restart the dev server.
+const data = generateSparklineData(card.yesPercentage, 7);
+return <MiniChart data={data} color="#31D482" height={60} />;
+```
 
-2) Implement endpoints on your server to match the minimal shapes used by the services:
+### Chart Data Generation
 
+All chart data is generated by `src/utils/chartData.ts` with realistic market behavior.
+
+#### Key Functions
+
+**`getCardChartData(outcomes?, yesPercentage?, noPercentage?)`**
+Smart function that automatically handles both multi-outcome and yes/no markets.
+
+```tsx
+// Multi-outcome market
+const chartData = getCardChartData([
+  { label: '50+ bps decrease', probability: 80 },
+  { label: '25 bps decrease', probability: 15.8 },
+  { label: 'No change', probability: 4.5 },
+]);
+
+// Yes/No market
+const chartData = getCardChartData(undefined, 65, 35);
+```
+
+**`generatePredictionMarketChartData(outcomes)`**
+Creates realistic time-series data for prediction markets.
+
+- 30 days of historical data
+- 15-minute intervals (96 points per day = 2,880 total points)
+- Multiple wave patterns for realistic movement
+- Momentum and volatility modeling
+- Random shocks simulating news events
+- Outcomes sum to 100% (market constraint)
+
+**`convertLineToCandlestickData(lineData, hoursPerCandle)`**
+Converts line chart data into OHLC candlestick format.
+
+```tsx
+const candlestickData = convertLineToCandlestickData(lineData, 1);
+// Returns 1-hour candles aggregated from 15-minute data
+```
+
+**`getVisibleTimeRange(period, latestTime?)`**
+Calculates timestamp ranges for time period presets.
+
+| Period | Range Displayed | Purpose |
+|--------|----------------|---------|
+| `15m` | Last 6 hours | Clear 15-minute intervals |
+| `1h` | Last 2 days | Hourly data visibility |
+| `6h` | Last 7 days | Weekly overview |
+| `1d` | Last 14 days | Two-week trends |
+| `All` | Full 30 days | Complete history |
+
+### Chart Controls & Interactions
+
+#### Zoom Controls
+
+All charts expose these methods via refs:
+
+```tsx
+const chartRef = useRef<ChartHandle>(null);
+
+chartRef.current?.zoomIn();      // Zoom in by 25%
+chartRef.current?.zoomOut();     // Zoom out by 25%
+chartRef.current?.zoomReset();   // Reset to fit all data
+chartRef.current?.setVisibleTimeRange(from, to); // Jump to specific range
+```
+
+#### Time Period Buttons
+
+Time period buttons act as **zoom presets** that jump to specific views:
+
+- Click **"15m"** → Zoom to last 6 hours (perfect for seeing 15-minute candles)
+- Click **"1h"** → Zoom to last 2 days (hourly overview)
+- Click **"6h"** → Zoom to last 7 days
+- Click **"1d"** → Zoom to last 14 days
+- Click **"All"** → Show full 30-day range
+
+**Users can still manually zoom beyond these presets!** The manual zoom controls allow free exploration of any time range.
+
+#### Chart Type Toggle
+
+In `TerminalOverlay.tsx`, users can switch between chart types:
+
+```tsx
+<button onClick={() => setChartType('line')}>
+  <img src="/Chart--line.svg" />
+</button>
+<button onClick={() => setChartType('candlestick')}>
+  <img src="/Chart--candlestick.svg" />
+</button>
+```
+
+### Where Charts Are Used
+
+1. **`src/components/Layout/RightSidebar.tsx`**
+   - Line chart at 240px height
+   - Time period and zoom controls
+   - Updates on card selection
+
+2. **`src/components/Terminal/TerminalOverlay.tsx`**
+   - Line chart at 320px height (larger terminal view)
+   - Candlestick chart toggle
+   - Full zoom and time period controls
+   - Chart type switcher
+
+### Color Scheme
+
+Standardized colors for market outcomes:
+
+| Outcome | Color | Hex Code |
+|---------|-------|----------|
+| Primary Yes | Green | `#31D482` |
+| Primary No | Red | `#F97066` |
+| Outcome 1 | White | `#FFFFFF` |
+| Outcome 2 | Green | `#179F61` |
+| Outcome 3 | Blue | `#0BA5EC` |
+| Outcome 4 | Yellow-Green | `#DCF58D` |
+| Outcome 5 | Pink | `#EE46BC` |
+| Outcome 6 | Purple | `#7A5AF8` |
+| Outcome 7 | Orange | `#F79009` |
+
+### Performance
+
+- ✅ Handles 2,880 data points smoothly
+- ✅ `useMemo` hooks prevent unnecessary re-renders
+- ✅ Efficient cleanup on component unmount
+- ✅ Responsive resize handling
+- ✅ No TradingView watermark
+
+---
+
+## 🏗️ Architecture
+
+### Tech Stack
+
+- **React 19** with TypeScript
+- **Vite 7** with React SWC plugin
+- **React Router** for navigation
+- **Tailwind CSS v4** for styling
+- **Zustand** for state management
+- **TanStack Query** for data fetching
+- **TanStack Table/Virtual** for lists
+- **lightweight-charts v5** for charts
+- **reconnecting-websocket** for live updates
+
+### Project Structure
+
+```
+src/
+├── components/
+│   ├── Chart/
+│   │   ├── Chart.tsx              # Line chart component
+│   │   ├── CandlestickChart.tsx   # OHLC candlestick chart
+│   │   ├── MiniChart.tsx          # Sparkline component
+│   │   ├── ChartExamples.tsx      # Usage examples
+│   │   └── README.md              # Chart documentation
+│   ├── Layout/
+│   │   ├── Layout.tsx             # Main app shell
+│   │   ├── LeftNav.tsx            # Navigation sidebar
+│   │   ├── TopNav.tsx             # Activity bar
+│   │   ├── RightSidebar.tsx       # Trading ticket (with chart)
+│   │   └── WatchlistSidebar.tsx   # Bookmarks panel
+│   ├── Terminal/
+│   │   ├── TerminalOverlay.tsx    # Full-screen terminal (with charts)
+│   │   └── OrderBook.tsx          # Outcome list component
+│   ├── Card/
+│   │   └── Card.tsx               # Market card component
+│   ├── Modals/                    # Auth, deposit, withdraw modals
+│   └── Tabs/                      # Tab components with animations
+├── routes/
+│   ├── explore/
+│   │   └── Explore.tsx            # Market explorer page
+│   ├── profile/
+│   │   ├── Profile.tsx            # Profile hub
+│   │   ├── my-profile/            # User profile
+│   │   ├── accounts/              # Account management
+│   │   └── points/                # Points dashboard
+│   └── terminal/
+│       └── Terminal.tsx           # Terminal page placeholder
+├── store/
+│   ├── ui.ts                      # UI state (sidebars, terminal, toasts)
+│   ├── watchlist.ts               # Bookmark management
+│   └── filters.ts                 # Provider filters
+├── services/
+│   ├── api.ts                     # API client wrapper
+│   ├── markets.ts                 # Market data services
+│   ├── accounts.ts                # Account services
+│   └── ws.ts                      # WebSocket helper
+├── utils/
+│   ├── chartData.ts               # Chart data generation
+│   └── search.ts                  # Search utilities
+├── models/
+│   ├── card.ts                    # CardData types & demo data
+│   └── accounts.ts                # Account types
+├── config/
+│   └── providers.ts               # Provider configs (icons, colors)
+├── App.tsx                        # Router & Query provider
+├── main.tsx                       # Entry point
+└── index.css                      # Global styles & Tailwind config
+```
+
+### State Management (Zustand)
+
+#### **UI Store** (`src/store/ui.ts`)
+- Right sidebar state (open/close, selected card)
+- Watchlist sidebar state (open/close, width)
+- Terminal overlay state (open/close, selected card)
+- Toast system (success, error, processing notifications)
+- Preset system for deep-linking to specific views
+
+#### **Watchlist Store** (`src/store/watchlist.ts`)
+- Bookmark management using `Map<string, CardData>`
+- Add/remove/toggle bookmarks
+- Persistence ready
+
+#### **Filters Store** (`src/store/filters.ts`)
+- Provider selection (Polymarket, Kalshi, Metaculus, etc.)
+- Used by Explore page for filtering
+
+### Data Flow
+
+1. **Demo Mode (Default)**
+   - Uses `demoCards` from `src/models/card.ts`
+   - Charts display realistic dummy data
+   - All UI features fully functional
+
+2. **API Mode (When `VITE_API_URL` is configured)**
+   - Services in `src/services/*` call backend APIs
+   - TanStack Query handles caching and updates
+   - WebSocket for real-time price updates
+
+3. **Chart Updates**
+   - Charts re-generate data when selected card changes
+   - `useMemo` prevents unnecessary recalculations
+   - Smooth transitions between different markets
+
+---
+
+## 🔌 Connecting to Real APIs
+
+### Step 1: Configure API URL
+
+Set `VITE_API_URL` in `.env.local` and restart the dev server:
+
+```bash
+VITE_API_URL=https://your-api-endpoint.com
+VITE_WS_URL=wss://your-api-endpoint.com/ws
+```
+
+### Step 2: Implement Backend Endpoints
+
+Your backend should provide these endpoints:
+
+**GET /markets**
 ```json
-// GET /accounts
 [
-  { "id": "acc_1", "provider": "polymarket", "balance": 2563.5, "currency": "USD" }
+  {
+    "id": "mkt_1",
+    "title": "Will inflation be below 3% by Dec 2025?",
+    "provider": "kalshi",
+    "yesPercentage": 65.5,
+    "noPercentage": 34.5,
+    "liquidity": "$2.5M",
+    "category": "Economics",
+    "outcomes": [
+      { "label": "Yes", "probability": 65.5 },
+      { "label": "No", "probability": 34.5 }
+    ]
+  }
 ]
 ```
 
+**GET /markets/:marketId**
 ```json
-// GET /markets
+{
+  "id": "mkt_1",
+  "title": "Will inflation be below 3% by Dec 2025?",
+  "provider": "kalshi",
+  "yesPercentage": 65.5,
+  "noPercentage": 34.5,
+  "history": [
+    { "time": 1640000000, "value": 60.5 },
+    { "time": 1640003600, "value": 61.2 },
+    ...
+  ]
+}
+```
+
+**GET /markets/:marketId/history**
+For real chart data:
+```json
 [
-  { "id": "mkt_1", "name": "US inflation below 3% by Dec 2025?", "source": "kalshi", "lastPrice": 0.42 }
+  { "time": 1640000000, "value": 60.5 },
+  { "time": 1640003600, "value": 61.2 },
+  { "time": 1640007200, "value": 62.1 }
 ]
 ```
 
+**GET /accounts**
 ```json
-// GET /markets/:marketId
-{ "id": "mkt_1", "name": "US inflation below 3% by Dec 2025?", "source": "kalshi", "lastPrice": 0.42 }
+[
+  {
+    "id": "acc_1",
+    "provider": "polymarket",
+    "balance": 2563.50,
+    "currency": "USD"
+  }
+]
 ```
 
-3) Use TanStack Query to fetch and cache. Example pattern (replace demo in Explore):
-```ts
-// Pseudocode example
-// const { data: markets } = useQuery({ queryKey: ['markets'], queryFn: listMarkets });
+### Step 3: Replace Demo Data
+
+In your components, replace `getCardChartData()` with real API data:
+
+```tsx
+// Before (demo data)
+const chartData = getCardChartData(card.outcomes, card.yesPercentage, card.noPercentage);
+
+// After (real API data)
+const { data: historyData } = useQuery({
+  queryKey: ['market-history', card.id],
+  queryFn: () => api.request(`/markets/${card.id}/history`)
+});
+
+const chartData = historyData?.map(outcome => ({
+  label: outcome.label,
+  color: outcome.color,
+  data: outcome.history
+})) || [];
 ```
 
-4) WebSockets (optional): set `VITE_WS_URL` and use `makeWS` for live updates. The helper reconnects with backoff.
+### Step 4: WebSocket Integration
 
+For real-time updates:
 
-## Styling & Theming
-- Tailwind v4 with custom CSS variables in `src/index.css`
-- Tokens like `--brand-underline-gradient` drive underline/indicator visuals
-- Fonts are self‑hosted from `public/fonts/*` and loaded via `@font-face`
-- Utility classes for animations and gradient borders are centralized in `index.css`
+```tsx
+import { makeWS } from './services/ws';
 
+const ws = makeWS(import.meta.env.VITE_WS_URL);
 
-## Routing & Deploy Notes
-- Router: `createBrowserRouter` with nested routes inside `Layout`
-- Deploying under a sub‑path: set `VITE_BASE_PATH` (must end with `/`) before building
-- SPA hosting: configure a fallback/rewrite to `index.html` (e.g., Vercel/Netlify “SPA mode”) to avoid 404s on refresh
+ws.addEventListener('message', (event) => {
+  const update = JSON.parse(event.data);
+  // Update chart data, prices, etc.
+});
+```
 
+---
 
-## Development Tips
-- Keep provider UI styles in `src/config/providers.ts` to avoid scattering color/icon logic
-- Add new modals under `src/components/Modals/*` and compose them in `TopNav`/pages
-- Prefer TanStack Query for async data and caching; colocate queries near components
-- Keep state in small, focused Zustand stores; avoid deep prop drilling
-- Use the toast helpers in `useToast` for consistent UX feedback
+## 🎨 Styling & Theming
 
+### Tailwind CSS v4
 
-## Troubleshooting
-- API not configured: set `VITE_API_URL` in `.env.local` and restart the dev server
-- Sub‑path 404s: set `VITE_BASE_PATH` (e.g., `/myapp/`) and rebuild; configure SPA rewrites
-- Port conflicts: Vite auto‑selects a new port; check the dev server output
-- Fonts not loading: ensure `public/fonts/*` paths resolve (respect base path in production)
-- Stale build: clear `node_modules` and `package-lock.json`, reinstall, and rebuild
+- Custom CSS variables in `src/index.css`
+- Dark theme by default
+- Custom animations and transitions
+- Gradient utilities for underlines and borders
 
+### Key CSS Variables
 
-## FAQ
-- Can I use HashRouter instead of BrowserRouter? Yes, but you’ll lose pretty URLs; change router creation in `src/App.tsx`.
-- Where do I add a new provider? Extend `ProviderKey` and add an entry in `src/config/providers.ts`. Use its keys in `CardData.provider`.
-- How do I enable real data on Explore? Replace the `demoCards` usage with a query calling `listMarkets()` and map the server’s shape into `CardData` (or adjust the UI to your server model).
-- Does the trading ticket place real orders? Not yet. It’s wired for UX (validation, slippage, toasts). Connect its actions to your backend when ready.
+```css
+--brand-underline-gradient: linear-gradient(90deg, #12B76A, #0BA5EC, #EE46BC, #7A5AF8, #F79009);
+--customBg: #0D0D0D;
+--customGray17: #171717;
+--customGray44: #2C2C2C;
+```
 
+### Custom Utilities
 
-## License
-This repository is private and unlicensed. If you intend to open‑source, add a license file and update this section.
+```css
+.panel-transition  /* Smooth panel animations */
+.flash-once        /* Flash effect on updates */
+.animate-rsb-in    /* Right sidebar slide in */
+.animate-rsb-out   /* Right sidebar slide out */
+```
 
+### Fonts
 
-## Acknowledgements
-- React, Vite, Tailwind CSS, TanStack Query/Table/Virtual, Zustand
-- `reconnecting-websocket` for reliable WS connections
+Self-hosted fonts in `public/fonts/`:
+- **Source Sans 3** (regular, semibold, bold)
+- **Geist Mono** (monospace for numbers)
 
-— Built for clarity, speed, and extensibility.
+---
+
+## 🚢 Deployment
+
+### Building for Production
+
+```bash
+npm run build
+```
+
+Output goes to `dist/` directory.
+
+### Sub-Path Deployment
+
+To deploy under a sub-path (e.g., `https://example.com/app/`):
+
+1. Set `VITE_BASE_PATH` in `.env.local`:
+```bash
+VITE_BASE_PATH=/app/
+```
+
+2. Rebuild:
+```bash
+npm run build
+```
+
+3. Configure your server to rewrite all requests to `index.html`
+
+### Static Hosting (Vercel, Netlify)
+
+- Enable **SPA mode** or set up rewrites to `index.html`
+- All routes will work correctly
+- Assets will load from the correct base path
+
+### Docker Deployment
+
+Example `Dockerfile`:
+
+```dockerfile
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+---
+
+## 🔧 Development Tips
+
+### Adding a New Market Provider
+
+1. Add provider to `src/config/providers.ts`:
+```tsx
+export const PROVIDER_CONFIGS = {
+  // ...
+  newprovider: {
+    icon: '/icons/newprovider.svg',
+    bgHex: '#FF5733',
+    label: 'New Provider'
+  }
+};
+```
+
+2. Update `ProviderKey` type
+3. Use in card data: `card.provider = 'newprovider'`
+
+### Creating Custom Modals
+
+1. Create component in `src/components/Modals/`
+2. Import in `TopNav.tsx` or relevant parent
+3. Use Zustand for modal state
+4. Follow existing modal patterns for animations
+
+### Adding New Chart Types
+
+The chart system is extensible:
+
+1. Create new component in `src/components/Chart/`
+2. Follow the pattern from `Chart.tsx` or `CandlestickChart.tsx`
+3. Use `forwardRef` and `useImperativeHandle` for zoom controls
+4. Add data conversion utilities to `src/utils/chartData.ts`
+
+### Performance Optimization
+
+- Use `useMemo` for expensive calculations
+- Use `useCallback` for event handlers
+- Keep Zustand stores small and focused
+- Avoid deep prop drilling - use context or Zustand
+- Lazy load heavy components with `React.lazy()`
+
+---
+
+## 🐛 Troubleshooting
+
+### Chart Not Displaying
+
+- Check console for errors
+- Ensure parent container has defined height
+- Verify data format matches `ChartSeries` type
+- Check that `lightweight-charts` is installed
+
+### API Not Working
+
+- Verify `VITE_API_URL` is set correctly
+- Restart dev server after changing `.env.local`
+- Check network tab for failed requests
+- Ensure backend CORS is configured
+
+### Time Periods Not Working
+
+- Check that `getVisibleTimeRange()` is imported
+- Verify chart refs are properly initialized
+- Ensure `setVisibleTimeRange()` method exists on chart
+
+### Build Errors
+
+- Clear `node_modules` and reinstall:
+  ```bash
+  rm -rf node_modules package-lock.json
+  npm install
+  ```
+- Check TypeScript errors: `npm run build`
+- Clear Vite cache: `rm -rf node_modules/.vite`
+
+### Port Already in Use
+
+Vite will automatically try another port. Check console output for the actual port being used.
+
+---
+
+## 📚 Additional Resources
+
+### Documentation
+
+- **React:** https://react.dev
+- **Vite:** https://vitejs.dev
+- **TailwindCSS:** https://tailwindcss.com
+- **Zustand:** https://zustand-demo.pmnd.rs
+- **TanStack Query:** https://tanstack.com/query
+- **lightweight-charts:** https://tradingview.github.io/lightweight-charts/
+
+### Chart Examples
+
+See `src/components/Chart/ChartExamples.tsx` for 8 comprehensive examples covering:
+- Basic usage
+- Multi-outcome markets
+- Custom styling
+- Responsive layouts
+- Side-by-side comparisons
+
+---
+
+## 🎯 Roadmap
+
+### Completed ✅
+- ✅ Interactive line charts
+- ✅ Candlestick charts
+- ✅ Zoom controls (in, out, reset)
+- ✅ Time period presets (15m, 1h, 6h, 1d, All)
+- ✅ 15-minute data granularity
+- ✅ Chart type toggle
+- ✅ Multi-outcome market support
+- ✅ Realistic dummy data generation
+
+### Planned 🚀
+- [ ] Real API integration
+- [ ] WebSocket live updates
+- [ ] Volume overlays on charts
+- [ ] Export chart as image
+- [ ] Technical indicators (RSI, MACD, etc.)
+- [ ] Custom annotations and drawings
+- [ ] Split view (multiple charts)
+- [ ] Portfolio tracking
+- [ ] Historical P&L charts
+- [ ] Mobile app (React Native)
+
+---
+
+## 📄 License
+
+This repository is private and proprietary. All rights reserved.
+
+---
+
+## 🙏 Acknowledgements
+
+Built with:
+- React, Vite, TypeScript, Tailwind CSS
+- TanStack Query, Table, Virtual
+- Zustand for state management
+- lightweight-charts by TradingView
+- reconnecting-websocket
+
+**Built for clarity, speed, and extensibility.**
+
+---
+
+## 📞 Support
+
+For questions or issues, please contact the development team.
+
+---
+
+**Happy Trading! 📈**

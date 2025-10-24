@@ -4,6 +4,8 @@
   /* Tailwind tokens (optional) */
   --font-sans: 'General Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
   --font-title: 'Grotesk', 'General Sans', ui-sans-serif, system-ui;
+  /* Extend breakpoints */
+  --breakpoint-3xl: 120rem; /* 1920px */
 }
 
 @font-face {
@@ -324,44 +326,63 @@ a, button, .btn {
 
 /* ========== Sidebar slide/fade animations ========== */
 @keyframes slideInRight {
-  from { transform: translateX(24px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  0% { transform: translateX(16px) scale(0.985); opacity: 0; }
+  60% { transform: translateX(0) scale(1.01); opacity: 1; }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
 }
 
 @keyframes slideOutRight {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(24px); opacity: 0; }
+  0% { transform: translateX(0) scale(1); opacity: 1; }
+  100% { transform: translateX(16px) scale(0.992); opacity: 0; }
 }
 
 @keyframes slideInLeft {
-  from { transform: translateX(-24px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  0% { transform: translateX(-16px) scale(0.985); opacity: 0; }
+  60% { transform: translateX(0) scale(1.01); opacity: 1; }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
 }
 
 @keyframes slideOutLeft {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(-24px); opacity: 0; }
+  0% { transform: translateX(0) scale(1); opacity: 1; }
+  100% { transform: translateX(-16px) scale(0.992); opacity: 0; }
 }
 
 .animate-rsb-in { /* right sidebar open */
-  animation: slideInRight 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: slideInRight 300ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform, opacity;
 }
 
 .animate-rsb-out { /* right sidebar close */
-  animation: slideOutRight 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  animation: slideOutRight 260ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
   will-change: transform, opacity;
 }
 
 .animate-lsb-in { /* left sidebar (watchlist) open */
-  animation: slideInLeft 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: slideInLeft 300ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform, opacity;
 }
 
 .animate-lsb-out { /* left sidebar (watchlist) close */
-  animation: slideOutLeft 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  animation: slideOutLeft 260ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
   will-change: transform, opacity;
 }
+
+/* Smooth positional/opacity transitions for panels that adjust layout */
+.panel-transition {
+  transition:
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    left 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity, left;
+}
+
+/* One-shot subtle white glow to signal content swap */
+@keyframes flashRing {
+  0% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+  35% { box-shadow: 0 0 0 2px rgba(255,255,255,0.55), 0 0 22px rgba(255,255,255,0.18); }
+  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+}
+.flash-once { animation: flashRing 360ms ease-out; }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-rsb-in, .animate-rsb-out, .animate-lsb-in, .animate-lsb-out,

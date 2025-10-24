@@ -2,7 +2,6 @@ import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from './components/Layout/Layout.tsx';
 import Explore from './routes/explore/Explore.tsx';
-import Terminal from './routes/terminal/Terminal.tsx';
 import Profile from './routes/profile/Profile.tsx';
 import MyProfile from './routes/profile/my-profile/MyProfile.tsx';
 import Markets from './routes/profile/markets/Markets.tsx';
@@ -17,7 +16,6 @@ const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <Explore /> },
-      { path: 'terminal/:marketId', element: <Terminal /> },
       {
         path: 'profile',
         element: <Profile />,

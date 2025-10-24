@@ -8,7 +8,6 @@ export interface ProviderConfig {
   icon: string; // path under /public
   bgHex: string; // background color hex
   textTone: 'light' | 'dark';
-  // optional helpers for components that previously relied on Tailwind classes
   borderHex?: string;
   sparkline?: number[];
 }
@@ -30,9 +29,4 @@ export function hexToRgbStr(hex: string): string {
   const b = bigint & 255;
   return `${r},${g},${b}`;
 }
-
-export function toneToTextClass(tone: ProviderConfig['textTone']): string {
-  return tone === 'dark' ? 'text-[#171717]' : 'text-white';
-}
-
 

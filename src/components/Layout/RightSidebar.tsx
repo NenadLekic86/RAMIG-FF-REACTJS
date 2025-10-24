@@ -1,16 +1,51 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useUIStore } from '../../store/ui';
 import { useToast } from '../../store/ui';
+import { useWatchlistStore } from '../../store/watchlist';
+import Chart, { type ChartHandle } from '../Chart/Chart';
+import { getCardChartData, type TimePeriod, getVisibleTimeRange } from '../../utils/chartData';
 
 export function RightSidebar() {
   const { isRightSidebarOpen, isRightSidebarClosing, selectedCard, closeRightSidebar } = useUIStore();
   const { pushToast } = useToast();
+  const isWatchlistOpen = useUIStore(s => s.isWatchlistOpen);
+  const openWatchlist = useUIStore(s => s.openWatchlist);
+  const openTerminal = useUIStore(s => s.openTerminal);
   const [view, setView] = useState<'list' | 'detail'>('list');
+  // Animate in only on mount (opening), not on every re-render
+  const [shouldAnimateIn, setShouldAnimateIn] = useState(true);
+  useEffect(() => {
+    const id = setTimeout(() => setShouldAnimateIn(false), 320);
+    return () => clearTimeout(id);
+  }, []);
+  // Flash when selected card changes (but avoid on first mount when opening)
+  const [flashKey, setFlashKey] = useState(0);
+  const prevCardIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!selectedCard) return;
+    const prev = prevCardIdRef.current;
+    prevCardIdRef.current = selectedCard.id;
+    // trigger flash only on change (and not the very first set)
+    if (prev && prev !== selectedCard.id) {
+      setFlashKey(k => k + 1);
+    }
+  }, [selectedCard]);
+  const isBookmarked = useWatchlistStore((s) => selectedCard ? s.isBookmarked(selectedCard.id) : false);
+  const toggleWatchlist = useWatchlistStore((s) => s.toggle);
   const [detail, setDetail] = useState<{ label: string; side: 'buy' | 'sell' | 'yes' | 'no' } | null>(null);
   const [slippage, setSlippage] = useState<number>(44);
   const [amount, setAmount] = useState<string>('10.00');
   const [price, setPrice] = useState<string>('5.00');
-  const balanceUsd = 2500; // static for now; will come from API later
+  const balanceUsd = 2500;
+  const [isOrderTypeOpen, setIsOrderTypeOpen] = useState(false);
+  const [orderType, setOrderType] = useState<'limit' | 'market'>('limit');
+  const orderTypeBtnRef = useRef<HTMLButtonElement>(null);
+  const orderTypeMenuRef = useRef<HTMLDivElement>(null);
+  const [tradeTab, setTradeTab] = useState<'buy' | 'sell'>('buy');
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('All');
+  
+  // Chart ref for zoom control
+  const chartRef = useRef<ChartHandle>(null);
 
   // Persist slippage only while on the detail view (cleared when leaving)
   useEffect(() => {
@@ -33,6 +68,27 @@ export function RightSidebar() {
     }
   }, [slippage, view]);
 
+  // Close order type dropdown on outside click / ESC
+  useEffect(() => {
+    if (!isOrderTypeOpen) return;
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!orderTypeMenuRef.current || !orderTypeBtnRef.current) return;
+      if (!orderTypeMenuRef.current.contains(target) && !orderTypeBtnRef.current.contains(target)) {
+        setIsOrderTypeOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOrderTypeOpen(false);
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [isOrderTypeOpen]);
+
   const sanitizeCurrencyInput = (value: string): string => {
     let v = value.replace(/[^0-9.]/g, '');
     const firstDot = v.indexOf('.');
@@ -53,16 +109,55 @@ export function RightSidebar() {
     return v;
   };
 
+  // Apply preset from store (open detail with selected outcome and side)
+  const preset = useUIStore(s => s.rightSidebarPreset);
+  const clearPreset = useUIStore(s => s.clearRightSidebarPreset);
+  useEffect(() => {
+    if (!preset) return;
+    if (preset.view === 'detail') {
+      setView('detail');
+      if (preset.tradeTab) setTradeTab(preset.tradeTab);
+      if (preset.outcomeLabel) setDetail({ label: preset.outcomeLabel, side: preset.tradeTab ?? 'buy' });
+      clearPreset();
+    }
+  }, [preset, clearPreset]);
+
+  // Generate chart data based on card outcomes (must be before early return)
+  // Always generate full 30 days of data; time periods act as zoom presets
+  const chartData = useMemo(
+    () => selectedCard ? getCardChartData(selectedCard.outcomes, selectedCard.yesPercentage, selectedCard.noPercentage) : [],
+    [selectedCard]
+  );
+
+  // Zoom handlers
+  const handleZoomIn = () => chartRef.current?.zoomIn();
+  const handleZoomOut = () => chartRef.current?.zoomOut();
+  const handleZoomReset = () => chartRef.current?.zoomReset();
+
+  // Time period handler - acts as zoom preset
+  const handleTimePeriodChange = (period: TimePeriod) => {
+    setTimePeriod(period);
+    
+    // Get the latest time from chart data
+    if (chartData.length === 0 || chartData[0].data.length === 0) return;
+    
+    const latestTime = chartData[0].data[chartData[0].data.length - 1].time;
+    const { from, to } = getVisibleTimeRange(period, latestTime * 1000); // Convert to ms
+    
+    // Apply zoom to chart
+    chartRef.current?.setVisibleTimeRange(from, to);
+  };
+
   // Early return to fully unmount when closed
   if (!isRightSidebarOpen || !selectedCard) return null;
 
-  // Derive some placeholder values for now (static mocked later)
   const yesPrice = `${selectedCard.yesPercentage.toFixed(1)}%`;
   const amountValue = parseFloat(amount || '0');
   const isOverBalance = !Number.isNaN(amountValue) && amountValue > balanceUsd;
 
+
   return (
-    <aside className={`fixed right-0 top-0 z-40 h-dvh w-[440px] border-l border-customGray44 bg-customGray17 shadow-xl ${isRightSidebarClosing ? 'animate-rsb-out' : 'animate-rsb-in'} overflow-y-auto overflow-x-hidden`}>
+    <aside key={flashKey} className={`fixed right-0 top-0 z-40 h-dvh w-[440px] border-l border-customGray44 bg-customGray17 shadow-xl ${isRightSidebarClosing ? 'animate-rsb-out' : (shouldAnimateIn ? 'animate-rsb-in' : '')} panel-transition overflow-y-auto overflow-x-hidden ${flashKey > 0 ? 'flash-once' : ''}`}>
       {/* Floating outside close button */}
       <button
         onClick={closeRightSidebar}
@@ -83,15 +178,31 @@ export function RightSidebar() {
           </div>
 
           <div className="flex items-center text-xs gap-1 shrink-0">
-            <button className="inline-flex items-center gap-2 px-2 py-1" aria-label="Open Terminal">
+            <button
+              className="inline-flex items-center gap-2 px-2 py-1"
+              aria-label="Open Terminal"
+              onClick={() => {
+                if (!selectedCard) return;
+                if (!isWatchlistOpen) openWatchlist();
+                openTerminal(selectedCard);
+                closeRightSidebar();
+              }}
+              type="button"
+            >
               <img src="/Chart--candlestick.svg" alt="Chart" className="w-5 h-5 opacity-70" />
               <span className="hidden sm:inline text-white/72 text-xs">Open Terminal</span>
             </button>
 
             <span className="mx-1 h-6 w-px bg-white/10" />
 
-            <button className="p-1" aria-label="Bookmark">
-              <img src="/Bookmark-icon.svg" alt="Bookmark" className="w-5 h-5 opacity-70" />
+            <button
+              className="p-1"
+              aria-label={isBookmarked ? 'Remove from watchlist' : 'Add to watchlist'}
+              aria-pressed={isBookmarked}
+              onClick={() => { if (selectedCard) toggleWatchlist(selectedCard); }}
+              type="button"
+            >
+              <img src={isBookmarked ? '/Bookmark--filled.svg' : '/Bookmark-icon.svg'} alt={isBookmarked ? 'Bookmarked' : 'Bookmark'} className="w-5 h-5 opacity-70" />
             </button>
             <button className="p-1" aria-label="Link">
               <img src="/Link-icon.svg" alt="Link" className="w-5 h-5 opacity-70" />
@@ -139,22 +250,34 @@ export function RightSidebar() {
       {/* Timeframe toolbar (static, hidden in detail view) */}
       {view === 'list' && (
       <div className="px-6 py-2 flex items-center gap-2 text-[11px] text-white/44">
-        {['15m','1h','6h','1d','All'].map((t) => (
-          <button key={t} className={`px-2 py-1 rounded ${t==='15m' ? 'text-white' : 'hover:bg-white/5'}`}>{t}</button>
+        {(['15m','1h','6h','1d','All'] as TimePeriod[]).map((t) => (
+          <button 
+            key={t} 
+            onClick={() => handleTimePeriodChange(t)}
+            className={`px-2 py-1 rounded transition-colors ${timePeriod === t ? 'text-white bg-white/10' : 'hover:bg-white/5'}`}
+          >
+            {t}
+          </button>
         ))}
         <div className="ml-auto flex items-center gap-3">
-          <img src="/Zoom--out.svg" alt="zoom" className="w-5 h-5 opacity-70" />
-          <img src="/Zoom--in.svg" alt="search" className="w-5 h-5 opacity-70" />
-          <img src="/Zoom--reset.svg" alt="search" className="w-5 h-5 opacity-70" />
+          <button type="button" onClick={handleZoomOut} aria-label="Zoom out" className="hover:opacity-100 transition-opacity">
+            <img src="/Zoom--out.svg" alt="Zoom out" className="w-5 h-5 opacity-70" />
+          </button>
+          <button type="button" onClick={handleZoomIn} aria-label="Zoom in" className="hover:opacity-100 transition-opacity">
+            <img src="/Zoom--in.svg" alt="Zoom in" className="w-5 h-5 opacity-70" />
+          </button>
+          <button type="button" onClick={handleZoomReset} aria-label="Reset zoom" className="hover:opacity-100 transition-opacity">
+            <img src="/Zoom--reset.svg" alt="Reset zoom" className="w-5 h-5 opacity-70" />
+          </button>
         </div>
       </div>
       )}
 
-      {/* Chart placeholder (hidden in detail view) */}
+      {/* Chart (hidden in detail view) */}
       {view === 'list' && (
       <div className="px-6 py-4 border-b border-customGray44">
-        <div className="h-auto flex items-center justify-center text-xs text-white/40">
-          <img src="/LineChart-rightsidebar.png" alt="chart" className="w-full h-full" />
+        <div className="h-auto">
+          <Chart ref={chartRef} series={chartData} height={240} />
         </div>
       </div>
       )}
@@ -172,8 +295,8 @@ export function RightSidebar() {
               <div className="text-right text-white font-semibold text-[18px]">{yesPrice}</div>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-4">
-              <button onClick={() => { setView('detail'); setDetail({ label: '50+ bps decreased', side: 'buy' }); }} className="h-[40px] rounded-[8px] border-1 border-[#31D482]/72 text-[#31D482] text-[14px] font-semibold hover:bg-[#31D482]/10">Buy 80¢</button>
-              <button onClick={() => { setView('detail'); setDetail({ label: '50+ bps decreased', side: 'sell' }); }} className="h-[40px] rounded-[8px] border-1 border-[#F97066]/72 text-[#F97066] text-[14px] font-semibold hover:bg-[#F97066]/10">Sell 20¢</button>
+              <button onClick={() => { setTradeTab('buy'); setView('detail'); setDetail({ label: '50+ bps decreased', side: 'buy' }); }} className="h-[40px] rounded-[8px] border-1 border-[#31D482]/72 text-[#31D482] text-[14px] font-semibold hover:bg-[#31D482]/10">Buy 80¢</button>
+              <button onClick={() => { setTradeTab('sell'); setView('detail'); setDetail({ label: '50+ bps decreased', side: 'sell' }); }} className="h-[40px] rounded-[8px] border-1 border-[#F97066]/72 text-[#F97066] text-[14px] font-semibold hover:bg-[#F97066]/10">Sell 20¢</button>
             </div>
             <div className="-mx-6 mt-6 h-px bg-white/10" />
           </div>
@@ -188,8 +311,8 @@ export function RightSidebar() {
               <div className="text-right text-white font-semibold text-[18px]">15.8%</div>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-4">
-              <button onClick={() => { setView('detail'); setDetail({ label: '25 bps decrease', side: 'buy' }); }} className="h-[40px] rounded-[8px] border-1 border-[#31D482]/72 text-[#31D482] text-[14px] font-semibold hover:bg-[#31D482]/10">Buy 15.8¢</button>
-              <button onClick={() => { setView('detail'); setDetail({ label: '25 bps decrease', side: 'sell' }); }} className="h-[40px] rounded-[8px] border-1 border-[#F97066]/72 text-[#F97066] text-[14px] font-semibold hover:bg-[#F97066]/10">Sell 84.2¢</button>
+              <button onClick={() => { setTradeTab('buy'); setView('detail'); setDetail({ label: '25 bps decrease', side: 'buy' }); }} className="h-[40px] rounded-[8px] border-1 border-[#31D482]/72 text-[#31D482] text-[14px] font-semibold hover:bg-[#31D482]/10">Buy 15.8¢</button>
+              <button onClick={() => { setTradeTab('sell'); setView('detail'); setDetail({ label: '25 bps decrease', side: 'sell' }); }} className="h-[40px] rounded-[8px] border-1 border-[#F97066]/72 text-[#F97066] text-[14px] font-semibold hover:bg-[#F97066]/10">Sell 84.2¢</button>
             </div>
             <div className="-mx-6 mt-6 h-px bg-white/10" />
           </div>
@@ -221,10 +344,49 @@ export function RightSidebar() {
                 </button>
                 <span className="font-semibold">Selected outcome</span>
               </div>
-              <button className="flex items-center gap-1 text-white/80" aria-label="Order type">
-                <span>Limit</span>
-                <img src="/Chevron--sort.svg" alt="Sort" className="w-5 h-5 opacity-80" />
-              </button>
+              <div className="relative">
+                <button
+                  ref={orderTypeBtnRef}
+                  className="flex items-center gap-1 text-white/80 px-2 py-1 rounded hover:bg-white/5"
+                  onClick={() => setIsOrderTypeOpen(o => !o)}
+                  aria-haspopup="menu"
+                  aria-expanded={isOrderTypeOpen}
+                  type="button"
+                >
+                  <span className="capitalize">{orderType === 'limit' ? 'Limit' : 'Market'}</span>
+                  <img src="/Chevron--sort.svg" alt="Order type" className="w-5 h-5 opacity-80" />
+                </button>
+                {isOrderTypeOpen && (
+                  <div
+                    ref={orderTypeMenuRef}
+                    role="menu"
+                    className="absolute right-0 top-[calc(100%+4px)] z-50 w-[232px] rounded-[16px] border border-customGray44 bg-[#292929] shadow-xl"
+                  >
+                    <div className="px-5 pt-5 pb-2 text-white/44 text-[12px]">Order type</div>
+                    <button
+                      className={`my-1 flex items-center justify-between rounded-[12px] mx-1 p-3 text-[14px] w-[93%] ${orderType==='limit' ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                      onClick={() => { setOrderType('limit'); setIsOrderTypeOpen(false); }}
+                      role="menuitemradio"
+                      aria-checked={orderType==='limit'}
+                      type="button"
+                    >
+                      <span>Limit</span>
+                      {orderType==='limit' && <img src="/Checkmark.svg" alt="Selected" className="w-5 h-5 opacity-80" />}
+                    </button>
+                    <button
+                      className={`my-1 flex items-center justify-between rounded-[12px] mx-1 p-3 text-[14px] w-[93%] ${orderType==='market' ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                      onClick={() => { setOrderType('market'); setIsOrderTypeOpen(false); }}
+                      role="menuitemradio"
+                      aria-checked={orderType==='market'}
+                      type="button"
+                    >
+                      <span>Market</span>
+                      {orderType==='market' && <img src="/Checkmark.svg" alt="Selected" className="w-5 h-5 opacity-80" />}
+                    </button>
+                    <div className="px-5 pt-4 pb-5 text-white/40 text-[14px]"></div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -237,8 +399,18 @@ export function RightSidebar() {
             <div className="text-right text-white font-semibold text-[18px]">{yesPrice}</div>
           </div>
           <div className="px-6 grid grid-cols-2 gap-4">
-            <button className="h-[44px] rounded-[10px] bg-transparent hover:bg-[#31D482]/72 border-1 border-[#31D482]/72 text-white text-[14px] font-semibold transition-colors duration-300">Buy 80¢</button>
-            <button className="h-[44px] rounded-[10px] bg-transparent hover:bg-[#F97066]/72 border-1 border-[#F97066]/72 text-[#F97066] hover:text-white text-[14px] font-semibold transition-colors duration-300">Sell 20¢</button>
+            <button
+              onClick={() => setTradeTab('buy')}
+              className={`h-[44px] rounded-[10px] border-1 border-[#31D482]/72 text-white text-[14px] font-semibold transition-colors duration-300 ${tradeTab==='buy' ? 'bg-[#31D482]/72' : 'bg-transparent hover:bg-[#31D482]/72'}`}
+            >
+              Buy 80¢
+            </button>
+            <button
+              onClick={() => setTradeTab('sell')}
+              className={`h-[44px] rounded-[10px] border-1 border-[#F97066]/72 text-[14px] font-semibold transition-colors duration-300 ${tradeTab==='sell' ? 'bg-[#F97066]/72 text-white' : 'bg-transparent text-[#F97066] hover:bg-[#F97066]/72 hover:text-white'}`}
+            >
+              Sell 20¢
+            </button>
           </div>
 
           {/* Amount */}
@@ -295,7 +467,7 @@ export function RightSidebar() {
           {/* Price */}
           <div className="px-6 border-b border-customGray44 py-4">
             <div className="text-white/90">Price</div>
-            <div className="text-xs text-white/44">Input price to change to limit order</div>
+            <div className="text-xs text-white/44">{orderType === 'market' ? 'Input price to change to limit order' : 'Specify desired execution price'}</div>
             <div className="flex items-center gap-2 pt-2 w-full">
               <span className="text-white/50 text-[18px]">$</span>
               <input
@@ -360,7 +532,7 @@ export function RightSidebar() {
               <div className="text-[#039855] font-semibold">$12,578.50</div>
             </div>
             <button
-              className={`mt-5 h-[56px] w-full rounded-[12px] bg-[#31D482]/72 hover:bg-[#31D482] text-white font-semibold transition-colors duration-300 ${isOverBalance ? 'opacity-50 cursor-not-allowed hover:bg-[#31D482]/72' : ''}`}
+              className={`mt-5 h-[56px] w-full rounded-[12px] ${tradeTab==='buy' ? 'bg-[#31D482]/72 hover:bg-[#31D482]' : 'bg-[#D92D20]/60 hover:bg-[#D92D20]'} text-white font-semibold transition-colors duration-300 ${isOverBalance ? (tradeTab==='buy' ? 'opacity-50 cursor-not-allowed hover:bg-[#31D482]/72' : 'opacity-50 cursor-not-allowed hover:bg-[#D92D20]/60') : ''}`}
               disabled={isOverBalance}
               aria-disabled={isOverBalance}
               onClick={() => {
@@ -381,7 +553,7 @@ export function RightSidebar() {
                 }, 1200);
               }}
             >
-              Buy Yes
+              {tradeTab==='buy' ? 'Buy Yes' : 'Sell Yes'}
             </button>
           </div>
 
